@@ -42,6 +42,6 @@ archivo = "./pdfs/Compilación Programas 1er Ciclo - 2024.pdf"
 # 2. Pon aquí una frase que veas en el PDF y quieras identificar
 # Ejemplo: "Competencias específicas de la unidad curricular" 
 # o algún contenido como "Numeración natural"
-frase_test = "Tramo 2 | Grados" 
+frase_test = "CE10." 
 
 buscar_y_analizar_texto(archivo, frase_test)
