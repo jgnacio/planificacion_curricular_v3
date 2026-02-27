@@ -6,7 +6,8 @@ from .models import CompetenciaEspecifica
 from .database import Neo4jManager
 
 class IngestionProcessor:
-    def __init__(self):
+    def __init__(self, ciclo=""):
+        self.ciclo_actual = ciclo
         # Memoria de Jerarquía
         self.espacio_actual = ""
         self.unidad_actual = ""
@@ -29,7 +30,11 @@ class IngestionProcessor:
 
     def flush_espacio(self):
         if self.b_espacio:
-            self.espacio_actual = " ".join(self.b_espacio).strip()
+            espacio_temp = " ".join(self.b_espacio).strip()
+            if "guía de orientación para los talleres" in espacio_temp.lower():
+                self.b_espacio = []
+                return
+            self.espacio_actual = espacio_temp
             self.unidad_actual = ""
             self.tramo_actual = ""
             print(f"\n[ESPACIO] {self.espacio_actual}")
@@ -114,6 +119,7 @@ class IngestionProcessor:
                     nivel_pertenencia=nivel_pertenencia
                 )
                 jerarquia = {
+                    'ciclo': self.ciclo_actual,
                     'espacio': self.espacio_actual,
                     'unidad': self.unidad_actual,
                     'tramo': self.tramo_actual

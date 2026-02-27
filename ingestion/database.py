@@ -54,12 +54,16 @@ class Neo4jManager:
 
     def _save_tx(self, tx, ce, jer):
         # 1. Crear/Obtener nodos de jerarquía
-        for label, key in [("Espacio", "espacio"), ("Unidad", "unidad"), ("Tramo", "tramo")]:
+        for label, key in [("Ciclo", "ciclo"), ("Espacio", "espacio"), ("Unidad", "unidad"), ("Tramo", "tramo")]:
             nombre = jer.get(key)
             if nombre:
                 tx.run(f"MERGE (n:{label} {{nombre: $nombre}})", nombre=nombre)
 
         # 2. Relacionar jerarquía
+        if jer.get('espacio') and jer.get('ciclo'):
+            tx.run("MATCH (e:Espacio {nombre: $es}), (c:Ciclo {nombre: $ci}) "
+                   "MERGE (e)-[:BELONGS_TO]->(c)", es=jer['espacio'], ci=jer['ciclo'])
+                   
         if jer.get('unidad') and jer.get('espacio'):
             tx.run("MATCH (u:Unidad {nombre: $un}), (e:Espacio {nombre: $es}) "
                    "MERGE (u)-[:BELONGS_TO]->(e)", un=jer['unidad'], es=jer['espacio'])
@@ -77,20 +81,37 @@ class Neo4jManager:
             "MERGE (c:CompetenciaEspecifica {id: $id}) "
             "SET c.enunciado = $enunciado, "
             "    c.desarrollo = $desarrollo, "
-            "    c.ejes = $ejes, "
-            "    c.mcn = $mcn, "
             "    c.nivel_pertenencia = $nivel"
         )
         tx.run(query_ce, 
                id=ce.id, 
                enunciado=ce.enunciado, 
                desarrollo=ce.desarrollo, 
-               ejes=ce.ejes, 
-               mcn=ce.mcn,
                nivel=ce.nivel_pertenencia)
 
+        import re
+        # Convertir Ejes en Nodos Independientes
+        if ce.ejes:
+            for eje in [e.strip() for e in re.split(r',|;', ce.ejes) if e.strip()]:
+                tx.run(
+                    "MERGE (e:Eje {nombre: $nombre}) "
+                    "WITH e MATCH (c:CompetenciaEspecifica {id: $ce_id}) "
+                    "MERGE (c)-[:PERTENECE_A_EJE]->(e)",
+                    nombre=eje, ce_id=ce.id
+                )
+
+        # Convertir MCN en Nodos Independientes
+        if ce.mcn:
+            for m in [m.strip() for m in re.split(r',|;', ce.mcn) if m.strip()]:
+                tx.run(
+                    "MERGE (node_mcn:CompetenciaMCN {nombre: $nombre}) "
+                    "WITH node_mcn MATCH (c:CompetenciaEspecifica {id: $ce_id}) "
+                    "MERGE (c)-[:CONTRIBUYE_A]->(node_mcn)",
+                    nombre=m, ce_id=ce.id
+                )
+
         # 4. Relacionar CE con su padre inmediato en la jerarquía
-        for label, key in [("Tramo", "tramo"), ("Unidad", "unidad"), ("Espacio", "espacio")]:
+        for label, key in [("Tramo", "tramo"), ("Unidad", "unidad"), ("Espacio", "espacio"), ("Ciclo", "ciclo")]:
             nombre = jer.get(key)
             if nombre:
                 tx.run(f"MATCH (c:CompetenciaEspecifica {{id: $ce_id}}), (p:{label} {{nombre: $p_nombre}}) "
