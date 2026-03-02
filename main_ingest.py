@@ -47,9 +47,13 @@ def main():
                             size = round(span_first["size"], 1)
                             font_first = span_first["font"]
                             
-                            processor.process_line(texto_linea, size, font_first, span_last)
+                            processor.process_line(texto_linea, size, font_first, span_last, page_num=page_num)
 
             processor.guardar_ce()
+            
+            # Segunda pasada para extraer y procesar tablas (Contenidos y Criterios)
+            processor.extract_tables(str(pdf_path))
+            
         finally:
             processor.close()
 

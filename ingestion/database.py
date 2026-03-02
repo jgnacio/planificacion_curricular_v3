@@ -1,5 +1,6 @@
 from neo4j import GraphDatabase
 import logging
+import os
 
 class Neo4jManager:
     def __init__(self, uri="bolt://localhost:7687", user="neo4j", password=None):
@@ -123,9 +124,185 @@ class Neo4jManager:
             tx.run("MATCH (c:CompetenciaEspecifica {id: $ce_id}), (p:CompetenciaEspecifica {id: $p_id}) "
                    "MERGE (c)-[:CHILD_OF]->(p)", ce_id=ce.id, p_id=ce.padre)
 
+    def _normalizar_grado(self, grado_bruto):
+        """
+        Filtro de hierro para unificar la nomenclatura de grados y evitar 
+        nodos duplicados en Neo4j por culpa de los caracteres del PDF.
+        """
+        if not grado_bruto or grado_bruto.lower() == "desconocido":
+            return "Desconocido"
+            
+        g = grado_bruto.lower()
+        
+        # 1. Si el "grado" detectado fue en realidad un Tramo genérico
+        if "tramo" in g:
+            if "1" in g: return "Tramo 1"
+            if "2" in g: return "Tramo 2"
+            if "3" in g: return "Tramo 3"
+            if "4" in g: return "Tramo 4"
+            if "5" in g: return "Tramo 5"
+            if "6" in g: return "Tramo 6"
+            return grado_bruto.strip().capitalize()
+            
+        # 2. Si es una combinación de grados (Ej: "Grados 5.º y 6.º")
+        if "1" in g and "2" in g: return "Grados 1.º y 2.º"
+        if "3" in g and "4" in g: return "Grados 3.º y 4.º"
+        if "5" in g and "6" in g: return "Grados 5.º y 6.º"
+        if "7" in g and "8" in g and "9" in g: return "Grados 7.º, 8.º y 9.º"
+        
+        # 3. Si es un grado individual (Atrapa cualquier número sin importar los caracteres raros)
+        if "10" in g: return "10.mo grado"
+        if "1" in g: return "1.er grado"
+        if "2" in g: return "2.do grado"
+        if "3" in g: return "3.er grado"
+        if "4" in g: return "4.to grado"
+        if "5" in g: return "5.to grado"
+        if "6" in g: return "6.to grado"
+        if "7" in g: return "7.mo grado"
+        if "8" in g: return "8.vo grado"
+        if "9" in g: return "9.no grado"
+        
+        return grado_bruto.strip().capitalize()
+
+    def save_contenido_criterio(self, ce_id, contenido, criterio, grado=None):
+        if not self.driver:
+            return
+            
+        # Aplicamos la magia antes de abrir la transacción
+        grado_limpio = self._normalizar_grado(grado) if grado else None
+
+        with self.driver.session() as session:
+            session.execute_write(self._save_contenido_criterio_tx, ce_id, contenido, criterio, grado_limpio)
+
+    def _save_contenido_criterio_tx(self, tx, ce_id, contenido, criterio, grado):
+        query = (
+            "MATCH (ce:CompetenciaEspecifica {id: $ce_id}) "
+            "MERGE (c:Contenido {descripcion: $contenido}) "
+            "MERGE (cr:CriterioLogro {descripcion: $criterio}) "
+            "MERGE (ce)-[:VINCULA_CON]->(c) "
+            "MERGE (c)-[:EVALUADO_POR]->(cr)"
+        )
+        tx.run(query, ce_id=ce_id, contenido=contenido, criterio=criterio)
+        
+        if grado and grado != "Desconocido":
+            query_grado = (
+                "MATCH (c:Contenido {descripcion: $contenido}) "
+                "MERGE (g:Grado {nombre: $grado}) "
+                "MERGE (c)-[:SE_ENSEÑA_EN]->(g)"
+            )
+            tx.run(query_grado, contenido=contenido, grado=grado)
+
     def clear_database(self):
         if not self.driver:
             return
         with self.driver.session() as session:
             session.run("MATCH (n) DETACH DELETE n")
             logging.info("Base de datos Neo4j limpiada correctamente.")
+
+# ==========================================
+# CONFIGURACIÓN DE BASE DE DATOS
+# ==========================================
+NEO4J_URI = os.getenv("NEO4J_URI", "bolt://localhost:7687")
+NEO4J_USER = os.getenv("NEO4J_USER", "neo4j")
+NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "Vortex2024!")
+
+# ==========================================
+# DEFINICIÓN DE LAS CONSULTAS (TOOLS)
+# ==========================================
+
+def consultar_normativa_neo4j(tramo: str, unidad: str, tema: str) -> dict:
+    """
+    Busca en la base de datos de grafos (Neo4j) el marco normativo oficial de ANEP
+    para un tramo, unidad curricular y tema/contenido específicos.
+
+    Args:
+        tramo (str): El tramo educativo (ej. "Tramo 1 | Niveles 3, 4 y 5 años" o "Tramo 1").
+        unidad (str): La unidad curricular o materia (ej. "Educación Física").
+        tema (str): El contenido específico o palabra clave del tema a enseñar.
+
+    Returns:
+        dict: Diccionario con el 'status' ('success' o 'error') y el 'report' 
+              conteniendo los datos estructurados (CE, Criterio, MCN, Ejes).
+    """
+    
+    # Consulta Cypher dinámica para atravesar el grafo y buscar coincidencias
+    print(f"\n[🔧 TOOL consultar_normativa_neo4j] -> Iniciando búsqueda de normativa...")
+    print(f"[🔍 PARÁMETROS] Tramo: '{tramo}' | Unidad: '{unidad}' | Tema: '{tema}'")
+    
+    cypher_query = """
+    // Conectamos CE con Contenido y Criterio
+    MATCH (ce:CompetenciaEspecifica)-[:VINCULA_CON]->(cont:Contenido)-[:EVALUADO_POR]->(crit:CriterioLogro)
+    
+    // Relacionamos CE con el Tramo para filtrar
+    MATCH (ce)-[:BELONGS_TO*1..3]->(t:Tramo)
+    
+    // Filtramos usando el prefijo único de CE para la Unidad
+    // y los textos de Tramo y Tema
+    WHERE ce.id STARTS WITH toUpper(replace($unidad, ' ', '_')) + '_'
+      AND toLower(t.nombre) CONTAINS toLower($tramo)
+      AND toLower(cont.descripcion) CONTAINS toLower($tema)
+      
+    // Buscamos MCN y Ejes de forma opcional. Usamos '--' para ignorar el nombre exacto de la relación por seguridad.
+    OPTIONAL MATCH (ce)-[:CONTRIBUYE_A]->(mcn:CompetenciaMCN)
+    OPTIONAL MATCH (ce)--(eje:EjeTematico)
+    
+    RETURN 
+        ce.id AS ce_id, 
+        ce.enunciado AS ce_enunciado, 
+        ce.desarrollo AS ce_desarrollo,
+        cont.descripcion AS contenido,
+        crit.descripcion AS criterio,
+        collect(DISTINCT mcn.nombre) AS mcns,
+        collect(DISTINCT eje.nombre) AS ejes
+    LIMIT 3
+    """
+    
+    try:
+        # Usando la clase Neo4jManager para consultar
+        db_manager = Neo4jManager(uri=NEO4J_URI, user=NEO4J_USER, password=NEO4J_PASSWORD)
+        if not db_manager.driver:
+            return {
+                "status": "error",
+                "error_message": "Error interno: no se pudo conectar con la base de datos Neo4j."
+            }
+
+        with db_manager.driver.session() as session:
+            result = session.run(cypher_query, unidad=unidad, tramo=tramo, tema=tema)
+            records = list(result)
+            
+        db_manager.close()
+
+        if not records:
+            print(f"[⚠️ RESULTADO] No se encontró normativa en Neo4j para estos parámetros.")
+            return {
+                "status": "error",
+                "error_message": f"No se encontró normativa en ANEP para Unidad: '{unidad}', Tramo: '{tramo}' y Tema: '{tema}'. Pídele al usuario que verifique los términos."
+            }
+
+        # Formatear el resultado para que el LLM lo entienda perfectamente
+        report_lines = ["DATOS NORMATIVOS OFICIALES ENCONTRADOS:\n"]
+        for idx, record in enumerate(records):
+            report_lines.append(f"--- RESULTADO {idx + 1} ---")
+            report_lines.append(f"COMPETENCIA ESPECÍFICA: [{record['ce_id']}] {record['ce_enunciado']}")
+            report_lines.append(f"DESARROLLO CE: {record['ce_desarrollo']}")
+            report_lines.append(f"CONTENIDO: {record['contenido']}")
+            report_lines.append(f"CRITERIO DE LOGRO: {record['criterio']}")
+            if record['mcns']:
+                report_lines.append(f"MCN (COMPETENCIAS GENERALES): {', '.join(record['mcns'])}")
+            if record['ejes']:
+                report_lines.append(f"EJES TEMÁTICOS: {', '.join(record['ejes'])}")
+            report_lines.append("")
+
+        print(f"[✅ RESULTADO] Se encontraron {len(records)} registros normativos.")
+        print("-" * 40)
+        return {
+            "status": "success",
+            "report": "\\n".join(report_lines)
+        }
+
+    except Exception as e:
+        print(f"[❌ ERROR] Excepción al consultar Neo4j: {str(e)}")
+        return {
+            "status": "error",
+            "error_message": f"Error interno al conectar con la base de datos Neo4j: {str(e)}"
+        }
