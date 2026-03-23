@@ -58,6 +58,7 @@ export async function getContenidosByUnidad(unidad: string) {
       `
       MATCH (ce:CompetenciaEspecifica)-[:VINCULA_CON]->(cont:Contenido)
       WHERE ce.id STARTS WITH $prefix
+        AND cont.descripcion <> toUpper(cont.descripcion)
       RETURN DISTINCT cont.descripcion as name
       ORDER BY cont.descripcion
       `,
@@ -104,13 +105,14 @@ export async function getContenidosByGradoYUnidad(grado: string, unidad: string)
       `
       MATCH (ce:CompetenciaEspecifica)-[:VINCULA_CON]->(cont:Contenido)
       WHERE ce.id STARTS WITH $prefix
-      
+        AND cont.descripcion <> toUpper(cont.descripcion)
+
       OPTIONAL MATCH (ce)-[:BELONGS_TO*1..3]->(t:Tramo {nombre: $grado})
       OPTIONAL MATCH (cont)-[:SE_ENSEÑA_EN]->(g:Grado {nombre: $grado})
-      
+
       WITH cont, t, g
       WHERE t IS NOT NULL OR g IS NOT NULL
-      
+
       RETURN DISTINCT cont.descripcion as name
       ORDER BY cont.descripcion
       `,

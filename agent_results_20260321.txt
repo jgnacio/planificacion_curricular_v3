@@ -1,0 +1,261 @@
+ Nivel 1 — Tools directas (validan el grafo, sin LLM)
+
+  Estas prueban que las herramientas devuelven datos correctos antes de involucrar al agente.
+
+  1.1 — Match exacto del documento real:
+  La práctica de escritura: la selección del tema, la progresión del contenido y la cohesión textual
+  (esperado: LENGUA_ESPAÑOLA, Tramo 3 o 4, score alto)
+Respuesta: El espacio curricular detectado es "Lengua Española" o "Segundas Lenguas y Lenguas Extranjeras", dependiendo del tramo educativo, y la unidad curricular es "Espacio de Comunicación". La competencia específica (CE) es "LENGUA_ESPAÑOLA_CE10", y el contenido oficial que mejor coincide es "MACROHABILIDADES - Escritura: La práctica de escritura: la selección del tema, la progresión del contenido y la cohesión textual.".
+
+El tramo educativo puede variar entre "Tramo 1 | Niveles 3, 4 y 5 años", "Tramo 2 | Grados 1.º y 2.º", "Tramo 3 | Grados 3.º y 4.º", y "Tramo 4 | Grados 5.º y 6.º".
+
+El score de confianza es alto, con un valor de 11.98, lo que indica una coincidencia precisa con el programa oficial de ANEP.
+
+Es importante mencionar que la planificación debería incluir todos los campos relevantes, como el criterio de logro, para garantizar una completa alineación con el programa oficial.
+
+
+  1.2 — Tema de Historia que ya sabemos funciona:
+  La reforma Vareliana y la modernización del Uruguay
+  (esperado: HISTORIA_CE7, Tramo 4)
+Res: El espacio curricular detectado es "Formación para la Ciudadanía" o "Historia", y la unidad curricular es "Espacio Ciencias Sociales y Humanidades". La competencia específica (CE) es "HISTORIA_CE7", y el contenido oficial que mejor coincide es "La modernización del Uruguay y la consolidación del Estado-nación (1876-1903). Cambios económicos y sociales. La inmigración y sus aportes. Formas de vida y expresiones culturales en el campo y la ciudad. El Militarismo. La reforma Vareliana y sus principios escolares. El Uruguay del 900: las ideas, las artes, los oficios.".
+
+El tramo educativo es "Tramo 4 | Grados 5.º y 6.º".
+
+El score de confianza es moderado, con un valor de 6.28, lo que indica una coincidencia razonable con el programa oficial de ANEP, pero no tan precisa como en otros casos.
+
+Es importante mencionar que la planificación debería incluir todos los campos relevantes, como el criterio de logro, para garantizar una completa alineación con el programa oficial.
+
+  1.3 — Tema ambiguo (varias unidades posibles):
+  textos explicativos
+  (esperado: que resuelva a Lengua, no Teatro)
+RES: El espacio curricular detectado es "Segundas Lenguas y Lenguas Extranjeras" o "Lengua Española", y la unidad curricular es "Espacio de Comunicación". La competencia específica (CE) es "LENGUA_ESPAÑOLA_CE8", y el contenido oficial que mejor coincide es "MACROHABILIDADES - Lectura: La paráfrasis en los textos explicativos.".
+
+El tramo educativo puede variar entre "Tramo 1 | Niveles 3, 4 y 5 años", "Tramo 2 | Grados 1.º y 2.º", "Tramo 3 | Grados 3.º y 4.º", y "Tramo 4 | Grados 5.º y 6.º".
+
+El score de confianza es bajo, con un valor de 4.82, lo que indica una coincidencia aproximada con el programa oficial de ANEP.
+
+Es importante mencionar que la planificación debería incluir todos los campos relevantes, como el criterio de logro, para garantizar una completa alineación con el programa oficial.
+
+Debido a la coincidencia aproximada, se sugiere reformular la búsqueda con sinónimos o términos más generales del programa para obtener resultados más precisos.
+
+  1.4 — Tema que no existe en el programa:
+  inteligencia artificial en el aula
+  (esperado: not_found o match de baja confianza en Ciencias de la Computación)
+RESPUESTA: DATOS_NO_ENCONTRADOS. Términos alternativos: "Tecnologías de la Información y la Comunicación", "Informática", "Computación".
+
+  ---
+  Nivel 2 — Modo Validador (el caso de uso nuevo)
+
+  Pegale el bloque completo de una actividad real del documento.
+
+  2.1 — Actividad de Escritura (Miércoles, Actividad 2):
+  Tengo esta actividad planificada, ¿a qué parte del programa oficial corresponde?
+
+  CONTENIDO: La práctica de escritura: la selección del tema, la progresión del contenido y la
+  cohesión textual
+  META: Los estudiantes evaluarán sus producciones escritas realizando un código de corrección
+  grupal.
+  PLAN: Se retoman la última actividad de lengua realizada en escritura (Prueba de diagnóstica-
+  Escritura descriptiva) para leerla con ellos y realizar un código de corrección grupal, registrado
+  en un papelógrafo.
+
+RESPUESTA: La actividad planificada corresponde al espacio curricular de "Lengua Española" o "Segundas Lenguas y Lenguas Extranjeras", unidad "Espacio de Comunicación". La Competencia Específica (CE) es "LENGUA_ESPAÑOLA_CE10", que se refiere a la práctica de escritura, incluyendo la selección del tema, la progresión del contenido y la cohesión textual. El contenido oficial que mejor coincide es "MACROHABILIDADES - Escritura: La práctica de escritura: la selección del tema, la progresión del contenido y la cohesión textual." El tramo puede variar dependiendo del grado en el que se esté aplicando la actividad. El score de confianza es alto, lo que sugiere una precisión en la coincidencia.
+
+Es importante mencionar que la actividad incluye la evaluación de producciones escritas y el código de corrección grupal, lo que puede estar relacionado con otros aspectos del currículum, pero el contenido principal se enfoca en la práctica de escritura.
+
+Los campos que la planificación tiene vacíos y deberían completarse son la unidad curricular específica y el criterio de logro, aunque el enunciado de la competencia específica está vacío en los resultados obtenidos, lo cual podría ser objeto de revisión y clarificación en el contexto de la planificación educativa.
+
+  2.2 — Actividad de Historia (Jueves, Actividad 3):
+  Tengo esta actividad, ¿qué competencia y criterio de logro le corresponde según el programa?
+
+  CONTENIDO: La modernización del Uruguay y la consolidación del Estado-nación (1876-1903). La
+  reforma Vareliana y sus principios escolares
+  META: Los estudiantes investigarán a partir de diversas fuentes la figura de José Pedro Varela,
+  comprenderán los principios fundamentales de su reforma y explicarán de forma colaborativa su
+  impacto histórico.
+  PLAN: Se comienza retomando lo del día anterior acerca de José Pedro Varela. Se presenta un texto
+  con información relevante para analizar con los estudiantes.
+
+Respuesta: El espacio curricular detectado es "Espacio Ciencias Sociales y Humanidades", y la unidad curricular es "Formación para la Ciudadanía" y también "Historia". La Competencia Específica (CE) que mejor coincide es la "HISTORIA_CE7". El contenido oficial que mejor coincide es "La modernización del Uruguay y la consolidación del Estado-nación (1876-1903). Cambios económicos y sociales. La inmigración y sus aportes. Formas de vida y expresiones culturales en el campo y la ciudad. El Militarismo. La reforma Vareliana y sus principios escolares. El Uruguay del 900: las ideas, las artes, los oficios.". El tramo es "Tramo 4 | Grados 5.º y 6.º". El score de confianza es 14.85.
+
+Sin embargo, se pueden sugerir algunas posibles mejoras en la actividad. Por ejemplo, podría ser útil incluir más detalles sobre los principios escolares de la reforma Vareliana y cómo se relacionan con la modernización del Uruguay. También podría ser interesante explorar las formas en que la inmigración y la urbanización afectaron la sociedad uruguaya durante este período.
+
+Es importante mencionar que la coincidencia es alta (score > 3.0), por lo que se puede considerar que la actividad está bien alineada con el programa oficial de ANEP.
+
+  2.3 — Actividad de Matemática (Viernes, Actividad 1):
+  Validá esta actividad contra el programa de ANEP:
+
+  CONTENIDO: Números a partir de 5 cifras. Valor Posicional.
+  META: Los estudiantes reconocerán el valor posicional de diferentes cantidades.
+  PLAN: Plantear: JP Varela, nació en 1845, si tenemos que descomponer este número; ¿cómo lo hacemos?
+   Descomponemos de forma cooperativa en la pizarra.
+RESPUESTA:
+La actividad docente presentada se enfoca en el reconocimiento del valor posicional de diferentes cantidades, específicamente números a partir de 5 cifras.
+
+El resultado de la búsqueda muestra varios nodos del programa oficial de ANEP que coinciden con la actividad, con un score de confianza de 5.76.
+
+A continuación, se presentan los resultados de la búsqueda:
+
+    Espacio curricular detectado: Espacio de Comunicación
+    Unidad Curricular: Segundas Lenguas y Lenguas Extranjeras, Lengua Española
+    Competencia Específica (CE): MATEMÁTICA_CE7
+    Contenido oficial que mejor coincide: Numeración natural, Numeración racional, Operaciones, Introducción a la estadística y a la probabilidad
+    Criterio de Logro: No especificado
+    Tramo: Tramo 1 | Niveles 3, 4 y 5 años, Tramo 2 | Grados 1.º y 2.º, Tramo 3 | Grados 3.º y 4.º
+    Score de confianza: 5.76
+
+La actividad coincide con varias unidades curriculares y tramos, lo que sugiere que el contenido se puede adecuar a diferentes niveles educativos.
+
+Campos que la planificación tiene vacíos y deberían completarse:
+
+    Criterio de Logro específico para la unidad curricular
+    Tramo educativo específico para la implementación de la actividad
+
+En general, la actividad se enfoca en el desarrollo de la comprensión de los números y las operaciones, que es un aspecto fundamental de la educación matemática en los diferentes tramos educativos.
+
+Es importante mencionar que, aunque el score de confianza es alto (5.76), la coincidencia no es exclusiva, lo que sugiere que la actividad podría adecuarse a diferentes contextos educativos con ajustes adecuados.
+
+  2.4 — Actividad de Ciencias/Geografía (Viernes, Actividad 3):
+  ¿A qué corresponde esta actividad en el programa oficial?
+
+  CONTENIDO: Acciones para el manejo y cuidado del agua dulce.
+  META: Comprender la importancia del cuidado del agua dulce en la vida cotidiana y en la comunidad.
+  PLAN: Se realiza una serie de preguntas sobre cómo cuidar el agua en nuestros hogares y qué
+  acciones tomar para hacer un USO RESPONSABLE DEL AGUA.
+RESPUESTA: El espacio curricular detectado es el de Geografía, la unidad curricular es la de "Segundas Lenguas y Lenguas Extranjeras" o "Lengua Española" y la competencia específica (CE) es la "GEOGRAFÍA_CE7". El contenido oficial que mejor coincide es "Bienes comunes ambientales: El agua: uso responsable." El criterio de logro es "Disfruta de los bienes comunes ambientales explorando a través de la acción y los sentidos." El tramo puede ser el "Tramo 3 | Grados 3.º y 4.º", "Tramo 4 | Grados 5.º y 6.º", "Tramo 1 | Niveles 3, 4 y 5 años" o "Tramo 2 | Grados 1.º y 2.º". El score de confianza es de 11.89.
+
+En cuanto a los campos que la planificación tiene vacíos y que deberían completarse, sería recomendable incluir más detalles sobre la meta de aprendizaje y el plan de acción para el uso responsable del agua, así como también evaluar los resultados de la actividad y realizar ajustes según sea necesario.
+
+Es importante mencionar que la coincidencia es alta (score de 11.89), por lo que se puede considerar que la actividad se alinea con el programa oficial de ANEP.
+  ---
+  Nivel 3 — Modo Generación (el caso de uso original)
+
+  3.1 — Input completo y claro:
+  Quiero planificar una clase de 45 minutos sobre fracciones para Tramo 3
+RESPUESTA: Título creativo y motivador: "Aventuras con fracciones en el Tramo 3"
+
+Justificación: Esta actividad desarrolla la Competencia Específica de Matemática (MATEMÁTICA_CE1) al incorporar paulatinamente el lenguaje matemático relacionándolo con el entorno más próximo para comunicar ideas y decisiones tomadas. La actividad también aporta al Marco Común Nacional (MCN) al desarrollar competencias generales como el pensamiento crítico, el pensamiento computacional y la comunicación.
+
+Inicio (10-15 min): Actividad disparadora o rescate de saberes previos.
+
+    Comienza la clase con una pregunta estimulante: "¿Alguna vez te has encontrado con una situación en la que hayas tenido que dividir algo en partes iguales?"
+    Pide a los estudiantes que compartan sus experiencias y anota en la pizarra algunas de las situaciones que mencionen.
+    Introduce el concepto de fracciones como una forma de representar partes de un todo.
+
+Desarrollo (25-45 min): Actividad central paso a paso.
+
+    Representación de fracciones: Muestra a los estudiantes cómo representar fracciones utilizando rectas numéricas y círculos.
+    Equivalencia de fracciones: Presenta ejemplos de fracciones equivalentes y pide a los estudiantes que identifiquen los patrones y las relaciones entre ellas.
+    Adición y sustracción de fracciones: Introduce las operaciones de adición y sustracción de fracciones y guía a los estudiantes en la resolución de problemas.
+    Aplicaciones prácticas: Presenta situaciones reales en las que se utilizan fracciones, como la preparación de recetas o la medición de longitudes.
+
+Cierre (10-15 min): Metacognición o evaluación formativa.
+
+    Pide a los estudiantes que reflejen sobre lo que han aprendido y cómo pueden aplicar las fracciones en su vida diaria.
+    Realiza una evaluación formativa para asegurarte de que los estudiantes han alcanzado los objetivos de la clase.
+
+Recursos: Materiales realistas para un aula uruguaya.
+
+    Rectas numéricas y círculos impresas o dibujadas en la pizarra
+    Ejemplos de fracciones equivalentes y problemas de adición y sustracción de fracciones
+    Situaciones reales que involucren fracciones, como recetas o medidas de longitud
+    Hojas de trabajo y lápices para que los estudiantes trabajen en los ejercicios y problemas.
+
+
+  3.2 — Input incompleto (debe preguntar):
+  Quiero planificar una clase de escritura
+  (esperado: el orquestador pide el tramo y la unidad antes de continuar)
+RESPUESTA: Para proceeding con la planificación, necesito saber tres datos obligatorios: el tramo o ciclo en el que se dictará la clase, la unidad curricular o materia y el tema o contenido específico de la clase de escritura. ¿Podrías proporcionarme esa información?
+
+  3.3 — Input con todos los datos en forma natural:
+  Necesito una planificación para Historia, Tramo 4, sobre la Revolución Industrial y su impacto en
+  Uruguay
+RESPUESTA: Lamentablemente, no se encontró normativa oficial de la ANEP para Historia en Tramo 4 sobre el tema "Revolución Industrial y su impacto en Uruguay".
+
+Podría ser que el tema no esté especificado exactamente como se requiere en el programa, o que no se incluya en la secuencia curricular de Historia para ese tramo.
+
+Sugerencias para ajustar la búsqueda:
+
+    Verificar si el tema se presenta en otro enfoque, como "El desarrollo industrial en América Latina" o "Transformaciones sociales en el siglo XIX".
+    Confirmar si el tramo está correctamente indicado (Tramo 4 corresponde a Grados 7 y 8, ¿estás seguro de que es el adecuado?).
+    Revisar si el tema está más enfocado en el contexto de Geografía o Ciencias Sociales (aunque Historia sea la unidad, algunos contenidos pueden estar distribuidos).
+
+¿Te gustaría que intentemos con otro enfoque o tema más cercano al programa oficial? Puedo ayudarte a ajustarlo. 😊
+
+Es un caso borde por la imagen que te adjunto, ya que no esta en la parte de contenidos
+
+  ---
+  Nivel 4 — Edge cases
+
+  4.1 — Input totalmente fuera del programa:
+  Planificá una clase de cocina para 4to grado
+RESPUESTA: Lo siento, no encontré normativa oficial en ANEP para el tema "cocina" en la unidad "Educación Artística" para el Tramo 3.
+
+Quizás el tema o la unidad está mal identificado. En el programa EBI de ANEP, la cocina no es un contenido oficial dentro de "Educación Artística". Sin embargo, actividades relacionadas con la cocina pueden estar incluidas en otras unidades, como:
+
+    Educación Artística (por ejemplo, diseño de comidas, elaboración de recetas como actividad artística)
+    Educación Cívica y Social (por ejemplo, temas de alimentación, salud, consumo responsable)
+    Educación Física (si se trata de actividades de movilidad, trabajo en grupo, etc.)
+
+¿Te gustaría que revisemos una de estas alternativas? Por ejemplo:
+
+    "Elaboración de recetas como actividad artística" en Educación Artística
+    "Alimentación saludable" en Educación Cívica y Social
+    "Trabajo en equipo y preparación de alimentos" en Educación Física
+
+¿Cuál de estas opciones te parece más adecuada para tu clase de 4to grado? Así puedo ayudarte a planificar una actividad alineada con la normativa oficial. 😊
+
+  4.2 — Actividad con campos vacíos (como pasan realmente los docs):
+  Validá esta actividad:
+
+  CONTENIDO: Actividad a cargo de la docente de Inglés
+  META:
+  PLAN:
+  (esperado: que reconozca que no hay suficiente info y lo comunique)
+RESPUESTA: ¡Claro! Para validar tu actividad, necesito que me compartas el texto completo de la meta y el plan de aprendizaje (los detalles de la actividad, como qué se quiere que los estudiantes hagan, cómo se desarrolla, etc.).
+
+Sin esos detalles, no puedo realizar una búsqueda semántica ni verificar si la actividad está alineada con la normativa oficial del programa EBI de la ANEP.
+
+Por favor, pegame el texto completo de la meta y el plan. 😊
+
+  4.3 — Pregunta sobre múltiples actividades a la vez:
+  Tengo 3 actividades del lunes:
+  1. Formación Cristiana - sin datos específicos
+  2. Inglés - sin datos específicos
+  3. Escritura: La práctica de escritura en textos descriptivos
+
+  ¿Cuál podés validar contra el programa oficial?
+RESPUESTA:
+📚 Espacio: Espacio de Comunicación
+📖 Unidad Curricular: Lengua Española / Segundas Lenguas y Lenguas Extranjeras
+🎯 Competencia Específica: LENGUA_ESPAÑOLA_CE4 — Escritura: La escritura de textos: concepto de párrafo
+📝 Contenido oficial: MACROHABILIDADES - Escritura: La escritura de textos: concepto de párrafo
+✅ Criterio de Logro: [VACÍO]
+📅 Tramo: Tramo 1 | Niveles 3, 4 y 5 años (y otros tramos, según el nivel)
+🔍 Confianza: 3.97/15 — Alta
+📝 Observaciones:
+
+    La actividad "La práctica de escritura en textos descriptivos" se alinea fuertemente con el contenido oficial de "La escritura de textos: concepto de párrafo".
+    Sin embargo, el criterio de logro está vacío en el resultado oficial. Esto es un punto clave: aunque el contenido está presente, no hay especificado cómo debe evidenciarse en el aula.
+    El contenido está en el Espacio de Comunicación, en unidades como Lengua Española o Segundas Lenguas y Lenguas Extranjeras, lo que indica que podría estar en el marco de Lengua Española (lo más probable).
+
+🔍 ¿Qué campos deberían completarse?
+
+    Criterio de Logro: Debe ser claro y observable (ej: El alumno escribe un párrafo que describe un objeto o lugar, usando conectores como "primero", "luego", "por eso").
+    Nivel o grado específico: El tramo es amplio (Tramo 1, 2, 3, 4). Necesitas definir qué grado (ej: Tramo 3, Grado 3º) para que la planificación sea precisa.
+    Tipo de texto o estructura: "Textos descriptivos" no está explícito en el contenido. El contenido oficial menciona "concepto de párrafo", pero no especifica "textos descriptivos".
+    → Sugerencia: Podrías ajustar el enunciado a: "La práctica de escritura de textos descriptivos: uso del párrafo para describir un objeto o lugar".
+
+💡 ¿Qué pasa con las otras actividades?
+
+    Formación Cristiana: No tiene datos específicos. Para validarla, necesitas el tema, habilidad o contenido específico (por ejemplo: "Cuidar del cuerpo", "Valores de solidaridad").
+    Inglés: El tema "Inglés" es muy amplio. Para validar, necesitas un contenido específico (ej: "Presentación de nombres", "Uso de frases de saludo").
+
+✅ Conclusión:
+La actividad de escritura puede validarse con alta confianza, pero requiere ajustes para que coincida exactamente con el programa oficial.
+👉 Recomendación: Reformula el enunciado para que esté alineado al contenido oficial (concepto de párrafo) y añade el criterio de logro observable.
+
+¿Deseas que te ayude a redactar una actividad completa y alineada con el programa? ¿O quieres que validemos otra de tus actividades (como Formación Cristiana o Inglés) con más detalle? 😊
+
+  ---
+  Pasame los resultados por grupo y te digo qué ajustar.

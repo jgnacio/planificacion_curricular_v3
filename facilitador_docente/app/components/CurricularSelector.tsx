@@ -150,24 +150,16 @@ export default function CurricularSelector() {
   const formControlStyle = {
     display: "flex",
     flexDirection: "column" as const,
-    marginBottom: "1.5rem",
   };
 
   return (
     <div
+      className="w-full max-w-[850px] mx-auto flex flex-col px-4 sm:px-6 py-6 box-border"
       style={{
-        maxWidth: "850px",
-        margin: "0 auto",
-        display: "flex",
-        flexDirection: "column",
         fontFamily: "'Inter', system-ui, sans-serif",
       }}
     >
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(380px, 1fr))",
-        gap: "1.25rem",
-      }}>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 w-full">
         {/* Ciclo */}
         <div style={formControlStyle}>
           <label htmlFor="ciclo" style={labelStyle}>
@@ -244,7 +236,7 @@ export default function CurricularSelector() {
         </div>
 
         {/* Contenido */}
-        <div style={{ ...formControlStyle, gridColumn: "1 / -1" }}>
+        <div style={formControlStyle} className="sm:col-span-2">
           <label htmlFor="contenido" style={labelStyle}>
             Contenido
           </label>
@@ -322,7 +314,7 @@ export default function CurricularSelector() {
                     )}
                         </div>
 
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "1rem" }}>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {/* Criterios de Logro */}
                     <div style={{ padding: "1.5rem", backgroundColor: "#fdf4ff", borderRadius: "12px", border: "1px solid #fbcfe8" }}>
                       <h4 style={{ fontSize: "0.85rem", textTransform: "uppercase", color: "#a21caf", margin: "0 0 1rem 0" }}>

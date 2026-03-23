@@ -1,8 +1,9 @@
+import os
 import re
 import fitz
 from typing import List, Optional
 from .constants import *
-from .utils import truncar, obtener_padre_ce, limpiar_texto
+from .utils import truncar, obtener_padre_ce, limpiar_texto, normalizar_prefix
 from .models import CompetenciaEspecifica
 from .database import Neo4jManager
 
@@ -71,7 +72,9 @@ class IngestionProcessor:
 
     def flush_unidad(self):
         if self.b_unidad:
-            self.unidad_actual = " ".join(self.b_unidad).strip()
+            unidad_bruta = " ".join(self.b_unidad).strip()
+            # Eliminar subtítulos entre paréntesis para unificar variantes del mismo nombre
+            self.unidad_actual = re.sub(r'\s*\(.*?\)', '', unidad_bruta).strip()
             self.tramo_actual = ""
             print(f"   [UNIDAD] {self.unidad_actual}")
             self.b_unidad = []
@@ -137,7 +140,7 @@ class IngestionProcessor:
                 if ejes: print(f"{sub_indent}[EJES] {truncar(ejes)}")
                 if mcn: print(f"{sub_indent}[MCN] {truncar(mcn)}")
 
-                unidad_prefix = self.unidad_actual.replace(" ", "_").upper()
+                unidad_prefix = normalizar_prefix(self.unidad_actual)
                 ce_id_unique = f"{unidad_prefix}_{self.ce_actual}"
                 padre_unique = f"{unidad_prefix}_{padre}" if padre else None
 
@@ -167,8 +170,12 @@ class IngestionProcessor:
         if page_num is not None:
             if not hasattr(self, 'unidad_por_pagina'):
                 self.unidad_por_pagina = {}
+            if not hasattr(self, 'tramo_por_pagina'):
+                self.tramo_por_pagina = {}
             if self.unidad_actual:
                 self.unidad_por_pagina[page_num] = self.unidad_actual
+            if self.tramo_actual:
+                self.tramo_por_pagina[page_num] = self.tramo_actual
 
         texto_lower = texto_linea.lower()
         
@@ -200,6 +207,12 @@ class IngestionProcessor:
             self.flush_espacio()
             self.flush_unidad()
             self.flush_tramo()
+            if not self.espacio_actual and page_num is not None:
+                if not hasattr(self, '_paginas_sin_jerarquia'):
+                    self._paginas_sin_jerarquia = set()
+                if page_num not in self._paginas_sin_jerarquia:
+                    self._paginas_sin_jerarquia.add(page_num)
+                    print(f"  [⚠️ SIN JERARQUÍA] Página {page_num + 1}: texto sin Espacio detectado (size={size}, font='{font_first}'): '{texto_linea[:60]}'")
 
         if any(keyword in texto_lower for keyword in ["contenidos, criterios de logro", "contenidos específicos", "orientaciones"]):
             self.guardar_ce()
@@ -272,31 +285,95 @@ class IngestionProcessor:
 
             for table in tabs:
                 rows = table.extract()
+
+                # Detectar columnas por header en lugar de asumir índices fijos
+                col_cont = 1
+                col_crit = 2
+                seccion_actual = ""
+                for r_idx in range(min(3, len(rows))):
+                    for c_idx, celda in enumerate(rows[r_idx]):
+                        if not celda: continue
+                        texto = str(celda).replace('\n', ' ').strip().lower()
+                        if "contenidos" in texto and "estructurante" not in texto:
+                            col_cont = c_idx
+                        if "criterio" in texto:
+                            col_crit = c_idx
+
                 for row in rows:
                     if len(row) < 2: continue
-                    
-                    celdas = [str(c).replace('\n', ' ').strip() if c else "" for c in row]
-                    comp_vinculadas = re.findall(r"CE\s?\d+(?:\.\d+)*", celdas[0])
-                    
-                    if comp_vinculadas:
-                        if len(celdas) >= 3:
-                            contenido = celdas[1]
-                            criterio = celdas[2]
-                            
-                            if "Contenidos" in contenido or "Criterios" in criterio:
-                                continue
-                                
-                            unidad_para_pagina = getattr(self, 'unidad_por_pagina', {}).get(page_num, "")
-                            unidad_prefix = unidad_para_pagina.replace(" ", "_").upper()
 
-                            for ce_id in comp_vinculadas:
-                                ce_id_clean = ce_id.replace(" ", "")
-                                ce_id_unique = f"{unidad_prefix}_{ce_id_clean}" if unidad_prefix else ce_id_clean
-                                print(f"  -> Salvando relación: {ce_id_unique} | Contenido: {contenido[:30]}... | Criterio: {criterio[:30]}...")
-                                self.db.save_contenido_criterio(ce_id_unique, contenido, criterio)
-                                
-                        elif len(celdas) == 2:
-                            pass
+                    # Aplanar para detectar CEs y criterio, pero preservar el bloque de contenido
+                    celdas_planas = [str(c).replace('\n', ' ').strip() if c else "" for c in row]
+                    fila_completa = " ".join(celdas_planas)
+                    comp_vinculadas = re.findall(r"CE\s?\d+(?:\.\d+)*", fila_completa)
+                    criterio = celdas_planas[col_crit] if col_crit < len(celdas_planas) else ""
+
+                    if col_cont >= len(row) or not row[col_cont]:
+                        continue
+
+                    unidad_para_pagina = getattr(self, 'unidad_por_pagina', {}).get(page_num, "")
+                    tramo_para_pagina = getattr(self, 'tramo_por_pagina', {}).get(page_num, "")
+                    unidad_prefix = normalizar_prefix(unidad_para_pagina)
+
+                    # Preservar saltos de línea para atomizar el bloque de contenido
+                    contenido_raw = str(row[col_cont]).strip()
+                    lineas = [l.strip() for l in contenido_raw.split('\n') if l.strip()]
+
+                    seccion_path = seccion_actual
+                    items_guardados = 0
+                    item_buffer = []
+
+                    def _flush_item(buf, seccion, ces, crit, unidad_pfx, tramo_pag, pag_num=None, pdf_src=None):
+                        if not buf: return 0
+                        item = ' '.join(buf).strip()
+                        if len(item) < 5: return 0
+                        contenido_final = f"{seccion}: {item}" if seccion else item
+                        guardados = 0
+                        if ces:
+                            for ce_id in ces:
+                                ce_id_unique = f"{unidad_pfx}_{ce_id.replace(' ', '')}" if unidad_pfx else ce_id.replace(' ', '')
+                                print(f"  -> {ce_id_unique} | {contenido_final[:60]}...")
+                                self.db.save_contenido_criterio(ce_id_unique, contenido_final, crit, tramo=tramo_pag, pagina=pag_num, pdf_fuente=pdf_src)
+                                guardados += 1
+                        else:
+                            ce_id_unique = f"{unidad_pfx}_SIN_CE" if unidad_pfx else "SIN_CE"
+                            print(f"  -> [SIN CE] {ce_id_unique} | {contenido_final[:60]}...")
+                            self.db.save_contenido_criterio(ce_id_unique, contenido_final, crit, tramo=tramo_pag, pagina=pag_num, pdf_fuente=pdf_src)
+                            guardados += 1
+                        return guardados
+
+                    for linea in lineas:
+                        if not linea or len(linea) < 3: continue
+                        if "Contenidos" in linea or "Criterios" in linea: continue
+
+                        es_header = linea == linea.upper() and linea != linea.lower() and not linea.startswith('•')
+                        es_bullet = linea.startswith('•') or linea.startswith('-') or linea.startswith('*')
+
+                        _pdf_src = os.path.basename(pdf_path)
+                        _pag = page_num + 1
+                        if es_header:
+                            items_guardados += _flush_item(item_buffer, seccion_path, comp_vinculadas, criterio, unidad_prefix, tramo_para_pagina, pag_num=_pag, pdf_src=_pdf_src)
+                            item_buffer = []
+                            print(f"  [🔍 SECCIÓN] Página {_pag}: '{linea}'")
+                            seccion_path = linea
+                        elif es_bullet:
+                            items_guardados += _flush_item(item_buffer, seccion_path, comp_vinculadas, criterio, unidad_prefix, tramo_para_pagina, pag_num=_pag, pdf_src=_pdf_src)
+                            item_buffer = [re.sub(r'^[•\-\*]\s*', '', linea).strip()]
+                        else:
+                            # Línea de continuación del ítem anterior
+                            item_buffer.append(linea)
+
+                    # Flush del último ítem
+                    items_guardados += _flush_item(item_buffer, seccion_path, comp_vinculadas, criterio, unidad_prefix, tramo_para_pagina, pag_num=page_num + 1, pdf_src=os.path.basename(pdf_path))
+
+                    if items_guardados == 0 and any(len(l) > 5 for l in lineas):
+                        # Fallback: guardar el bloque completo si no se extrajo ningún ítem atómico
+                        contenido_bloque = celdas_planas[col_cont]
+                        if contenido_bloque and len(contenido_bloque) >= 3:
+                            ce_id_unique = f"{unidad_prefix}_{comp_vinculadas[0].replace(' ', '')}" if comp_vinculadas else f"{unidad_prefix}_SIN_CE"
+                            self.db.save_contenido_criterio(ce_id_unique, contenido_bloque, criterio, tramo=tramo_para_pagina, pagina=page_num + 1, pdf_fuente=os.path.basename(pdf_path))
+
+                    seccion_actual = seccion_path  # propagar sección entre filas
 
         doc.close()
 
@@ -352,7 +429,8 @@ class IngestionProcessor:
                         tabla_activa = False 
                     elif 30.0 <= size <= 34.0 and "Bold" in elem["font"]:
                         if "perfil" not in texto_lower and "página" not in texto_lower:
-                            unidad_actual = texto.replace('\n', ' ').strip()
+                            unidad_bruta = texto.replace('\n', ' ').strip()
+                            unidad_actual = re.sub(r'\s*\(.*?\)', '', unidad_bruta).strip()
                             grado_actual = "Desconocido"
                             tabla_activa = False
                     elif 23.0 <= size <= 26.0 and "tramo" in texto_lower:
@@ -415,27 +493,32 @@ class IngestionProcessor:
                         tabla_activa = True
                         start_row = r_idx_header + 1
                         
-                        # --- NUEVO CÁLCULO DE SPAN CON "CORTAFUEGOS" ---
-                        span_contenidos = 1
-                        
-                        # Definimos la frontera máxima permitida para no comernos los Criterios
+                        # --- CÁLCULO DE SPAN ---
+                        # Frontera máxima: la columna CE o Criterio (lo que esté más a la izquierda)
                         limite_derecha = len(rows[r_idx_header])
                         if col_crit != -1 and col_crit > col_cont: limite_derecha = min(limite_derecha, col_crit)
                         if col_ce != -1 and col_ce > col_cont: limite_derecha = min(limite_derecha, col_ce)
 
-                        for i in range(col_cont + 1, limite_derecha):
-                            # Verificamos si la columna está realmente vacía analizando las primeras 3 filas
-                            es_vacia = True
-                            for r in range(min(3, len(rows))):
-                                if i < len(rows[r]) and rows[r][i]:
-                                    val = str(rows[r][i]).replace('\n', ' ').strip().lower()
-                                    if val and val != "none" and "profundización" not in val:
-                                        es_vacia = False
-                                        break
-                            if es_vacia:
-                                span_contenidos += 1
-                            else:
-                                break
+                        cols_entre = limite_derecha - col_cont  # cuántas columnas de contenido hay
+
+                        if cols_entre >= 3:
+                            # Tabla jerárquica: macro / sub-sección / ítem (ej: Lengua Española 2do Ciclo)
+                            span_contenidos = cols_entre
+                        else:
+                            # Tabla simple o con columnas vacías de relleno
+                            span_contenidos = 1
+                            for i in range(col_cont + 1, limite_derecha):
+                                es_vacia = True
+                                for r in range(min(3, len(rows))):
+                                    if i < len(rows[r]) and rows[r][i]:
+                                        val = str(rows[r][i]).replace('\n', ' ').strip().lower()
+                                        if val and val != "none" and "profundización" not in val:
+                                            es_vacia = False
+                                            break
+                                if es_vacia:
+                                    span_contenidos += 1
+                                else:
+                                    break
                         # -----------------------------------------------
                                 
                         t_col_cont = col_cont
@@ -462,11 +545,11 @@ class IngestionProcessor:
                     else:
                         continue
 
-                    unidad_prefix = unidad_actual.replace(" ", "_").upper()
+                    unidad_prefix = normalizar_prefix(unidad_actual)
                     if unidad_prefix == "DESCONOCIDA" and hasattr(self, 'unidad_por_pagina'):
                         unidad_para_pagina = self.unidad_por_pagina.get(page_num, "")
                         if unidad_para_pagina:
-                            unidad_prefix = unidad_para_pagina.replace(" ", "_").upper()
+                            unidad_prefix = normalizar_prefix(unidad_para_pagina)
 
                     print(f"\n[PÁGINA {page_num + 1}] TABLA DETECTADA {'(CONTINUACIÓN DE LA ANTERIOR)' if es_continuacion else ''}")
                     print(f"   [CONTEXTO] Unidad: {unidad_actual[:25]}... | Grado: {grado_actual}")
@@ -474,58 +557,67 @@ class IngestionProcessor:
                     contenidos_extraidos = []
 
                     if t_span >= 3:
-                        bloques_fusionados = {} 
-                        
+                        # Guardar cada ítem de contenido de forma atómica (una fila = un nodo Contenido)
                         for r_idx in range(start_row, len(rows)):
                             fila = rows[r_idx]
                             if t_col_cont + 2 >= len(fila): continue
-                            
+
                             c0 = str(fila[t_col_cont]).replace('\n', ' ').strip() if fila[t_col_cont] else ""
                             c1 = str(fila[t_col_cont+1]).replace('\n', ' ').strip() if fila[t_col_cont+1] else ""
                             c2 = str(fila[t_col_cont+2]).replace('\n', ' ').strip() if fila[t_col_cont+2] else ""
-                            
-                            if c0 and c0.lower() != "none": memoria_macro = c0
-                            if c1 and c1.lower() != "none": memoria_tema = c1
-                            
-                            if not c2 or c2.lower() == "none": continue 
-                            
-                            clave = (memoria_macro, memoria_tema)
-                            if clave not in bloques_fusionados:
-                                bloques_fusionados[clave] = {'textos': [], 'ces': set(), 'criterio': ""}
-                                
-                            c2_clean = re.sub(r'^[•\-\*]\s*', '', c2)
-                            bloques_fusionados[clave]['textos'].append(c2_clean)
-                            
-                            if t_col_ce != -1 and t_col_ce < len(fila) and fila[t_col_ce]:
-                                ces = re.findall(r"CE\s?\d+(?:\.\d+)*", str(fila[t_col_ce]))
-                                bloques_fusionados[clave]['ces'].update(ces)
-                                
-                            if t_col_crit != -1 and t_col_crit < len(fila) and fila[t_col_crit]:
-                                crit = str(fila[t_col_crit]).replace('\n', ' ').strip()
-                                if crit and crit.lower() != "none":
-                                    bloques_fusionados[clave]['criterio'] = crit
 
-                        for (macro, tema), data in bloques_fusionados.items():
-                            texto_unido = " ".join(data['textos'])
-                            contenido_final = f"{macro} - {tema} : {texto_unido}"
-                            criterio_final = data['criterio']
+                            # Actualizar sección y sub-sección en memoria
+                            if c0 and c0.lower() not in ("none", "") and not c0.startswith("Contenidos"):
+                                memoria_macro = c0
+                            if c1 and c1.lower() not in ("none", ""):
+                                memoria_tema = c1
+
+                            # c2 es el ítem atómico; si está vacío, es una fila de sección, saltar
+                            if not c2 or c2.lower() == "none" or len(c2) < 3: continue
+
+                            # Construir label jerárquico: "MACRO - Sub-sección: ítem"
+                            partes = [p for p in [memoria_macro, memoria_tema] if p]
+                            prefijo = " - ".join(partes)
+                            item_limpio = re.sub(r'^[•\-\*]\s*', '', c2)
+                            contenido_final = f"{prefijo}: {item_limpio}" if prefijo else item_limpio
+
+                            # CEs y criterio de esta fila específica
+                            ces_fila = []
+                            if t_col_ce != -1 and t_col_ce < len(fila) and fila[t_col_ce]:
+                                ces_fila = re.findall(r"CE\s?\d+(?:\.\d+)*", str(fila[t_col_ce]))
+
+                            criterio_fila = ""
+                            if t_col_crit != -1 and t_col_crit < len(fila) and fila[t_col_crit]:
+                                crit_raw = str(fila[t_col_crit]).replace('\n', ' ').strip()
+                                if crit_raw.lower() != "none":
+                                    criterio_fila = crit_raw
+
                             contenidos_extraidos.append(contenido_final)
-                            
-                            for ce_id in data['ces']:
-                                ce_id_clean = ce_id.replace(" ", "")
-                                ce_id_unique = f"{unidad_prefix}_{ce_id_clean}" if unidad_prefix else ce_id_clean
-                                print(f"  -> Salvando relación: {ce_id_unique} | Contenido: {contenido_final[:30]}... | Criterio: {criterio_final[:30]}...")
-                                
-                                # GUARDADO CON GRADO
-                                self.db.save_contenido_criterio(ce_id_unique, contenido_final, criterio_final, grado=grado_actual)
+
+                            if ces_fila:
+                                for ce_id in ces_fila:
+                                    ce_id_unique = f"{unidad_prefix}_{ce_id.replace(' ', '')}" if unidad_prefix else ce_id.replace(' ', '')
+                                    print(f"  -> {ce_id_unique} | {contenido_final[:60]}...")
+                                    self.db.save_contenido_criterio(ce_id_unique, contenido_final, criterio_fila, grado=grado_actual, tramo=self.tramo_actual, pagina=page_num + 1, pdf_fuente=os.path.basename(pdf_path))
+                            else:
+                                ce_id_unique = f"{unidad_prefix}_SIN_CE" if unidad_prefix else "SIN_CE"
+                                print(f"  -> [SIN CE] {ce_id_unique} | {contenido_final[:60]}...")
+                                self.db.save_contenido_criterio(ce_id_unique, contenido_final, criterio_fila, grado=grado_actual, tramo=self.tramo_actual, pagina=page_num + 1, pdf_fuente=os.path.basename(pdf_path))
 
                     else:
+                        seccion_actual = ""
                         for r_idx in range(start_row, len(rows)):
                             fila = rows[r_idx]
                             if t_col_cont < len(fila) and fila[t_col_cont]:
                                 contenido = str(fila[t_col_cont]).replace('\n', ' ').strip()
                                 if len(contenido) < 5 or "Contenidos" in contenido or contenido.lower() == "none": continue
+                                if contenido == contenido.upper() and contenido != contenido.lower():
+                                    print(f"  [🔍 SECCIÓN] Página {page_num + 1}, fila {r_idx}: '{contenido}'")
+                                    seccion_actual = contenido
+                                    continue
                                 contenido = re.sub(r'^[•\-\*]\s*', '', contenido)
+                                if seccion_actual:
+                                    contenido = f"{seccion_actual}: {contenido}"
                                 
                                 criterio = ""
                                 if t_col_crit != -1 and t_col_crit < len(fila) and fila[t_col_crit]:
@@ -546,7 +638,7 @@ class IngestionProcessor:
                                     print(f"  -> Salvando relación: {ce_id_unique} | Contenido: {contenido[:30]}... | Criterio: {criterio[:30]}...")
                                     
                                     # GUARDADO CON GRADO
-                                    self.db.save_contenido_criterio(ce_id_unique, contenido, criterio, grado=grado_actual)
+                                    self.db.save_contenido_criterio(ce_id_unique, contenido, criterio, grado=grado_actual, tramo=self.tramo_actual, pagina=page_num + 1, pdf_fuente=os.path.basename(pdf_path))
 
                     print(f"   [CONTENIDOS EXTRAÍDOS ({len(contenidos_extraidos)})]:")
                     for cont in contenidos_extraidos[:3]:

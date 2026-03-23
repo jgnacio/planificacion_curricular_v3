@@ -3,21 +3,27 @@ import logging
 import os
 
 class Neo4jManager:
-    def __init__(self, uri="bolt://localhost:7687", user="neo4j", password=None):
-        auth = None
-        if user and password:
-            auth = (user, password)
-        elif password is None:
-            # Often if NEO4J_AUTH=none, we don't need auth, but the driver might expect something or it might be ignored
+    def __init__(self, uri=None, user=None, password=None):
+        env = os.getenv("APP_ENV", "dev").lower()
+
+        if env == "dev":
+            # Neo4j local del docker-compose (NEO4J_AUTH=none)
+            self.uri = uri or "bolt://localhost:7687"
             auth = None
-            
+            print(f"[NEO4J] Modo DEV → {self.uri} (sin auth)")
+        else:
+            self.uri = uri or os.getenv("NEO4J_URI", "neo4j+s://91b545dd.databases.neo4j.io")
+            self.user = user or os.getenv("NEO4J_USER", "91b545dd")
+            self.password = password or os.getenv("NEO4J_PASSWORD", "ZosSVm3JRGcNkVBwYNFMSp5L8odcSpEhRv3VnbUlFhQ")
+            auth = (self.user, self.password)
+            print(f"[NEO4J] Modo PROD → {self.uri}")
+
         try:
-            self.driver = GraphDatabase.driver(uri, auth=auth)
-            # Test connection
+            self.driver = GraphDatabase.driver(self.uri, auth=auth)
             self.driver.verify_connectivity()
-            logging.info("Conectado a Neo4j exitosamente.")
+            logging.info(f"Conectado exitosamente a: {self.uri}")
         except Exception as e:
-            logging.error(f"Error al conectar a Neo4j: {e}")
+            logging.error(f"Error crítico al conectar a Neo4j ({self.uri}): {e}")
             self.driver = None
 
     def close(self):
@@ -164,33 +170,45 @@ class Neo4jManager:
         
         return grado_bruto.strip().capitalize()
 
-    def save_contenido_criterio(self, ce_id, contenido, criterio, grado=None):
+    def save_contenido_criterio(self, ce_id, contenido, criterio, grado=None, tramo=None, pagina=None, pdf_fuente=None):
         if not self.driver:
             return
-            
-        # Aplicamos la magia antes de abrir la transacción
+
         grado_limpio = self._normalizar_grado(grado) if grado else None
 
         with self.driver.session() as session:
-            session.execute_write(self._save_contenido_criterio_tx, ce_id, contenido, criterio, grado_limpio)
+            session.execute_write(self._save_contenido_criterio_tx, ce_id, contenido, criterio, grado_limpio, tramo, pagina, pdf_fuente)
 
-    def _save_contenido_criterio_tx(self, tx, ce_id, contenido, criterio, grado):
+    def _save_contenido_criterio_tx(self, tx, ce_id, contenido, criterio, grado, tramo, pagina, pdf_fuente):
+        check = tx.run("MATCH (ce:CompetenciaEspecifica {id: $ce_id}) RETURN ce", ce_id=ce_id)
+        if not check.single():
+            print(f"  [⚠️ CE SIN DATOS] Creando stub para CE no encontrado en jerarquía: '{ce_id}'")
+
         query = (
-            "MATCH (ce:CompetenciaEspecifica {id: $ce_id}) "
+            "MERGE (ce:CompetenciaEspecifica {id: $ce_id}) "
             "MERGE (c:Contenido {descripcion: $contenido}) "
+            "ON CREATE SET c.pagina = $pagina, c.pdf_fuente = $pdf_fuente "
             "MERGE (cr:CriterioLogro {descripcion: $criterio}) "
             "MERGE (ce)-[:VINCULA_CON]->(c) "
             "MERGE (c)-[:EVALUADO_POR]->(cr)"
         )
-        tx.run(query, ce_id=ce_id, contenido=contenido, criterio=criterio)
-        
+        tx.run(query, ce_id=ce_id, contenido=contenido, criterio=criterio, pagina=pagina, pdf_fuente=pdf_fuente)
+
         if grado and grado != "Desconocido":
-            query_grado = (
+            tx.run(
                 "MATCH (c:Contenido {descripcion: $contenido}) "
                 "MERGE (g:Grado {nombre: $grado}) "
-                "MERGE (c)-[:SE_ENSEÑA_EN]->(g)"
+                "MERGE (c)-[:SE_ENSEÑA_EN]->(g)",
+                contenido=contenido, grado=grado
             )
-            tx.run(query_grado, contenido=contenido, grado=grado)
+
+        if tramo and tramo != "Desconocido":
+            tx.run(
+                "MATCH (c:Contenido {descripcion: $contenido}) "
+                "MERGE (t:Tramo {nombre: $tramo}) "
+                "MERGE (c)-[:SE_ENSEÑA_EN]->(t)",
+                contenido=contenido, tramo=tramo
+            )
 
     def clear_database(self):
         if not self.driver:
@@ -202,9 +220,15 @@ class Neo4jManager:
 # ==========================================
 # CONFIGURACIÓN DE BASE DE DATOS
 # ==========================================
-NEO4J_URI = os.getenv("NEO4J_URI", "bolt://localhost:7687")
-NEO4J_USER = os.getenv("NEO4J_USER", "neo4j")
-NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "Vortex2024!")
+_env = os.getenv("APP_ENV", "dev").lower()
+if _env == "dev":
+    NEO4J_URI = "bolt://localhost:7687"
+    NEO4J_USER = ""
+    NEO4J_PASSWORD = ""
+else:
+    NEO4J_URI = os.getenv("NEO4J_URI", "neo4j+s://91b545dd.databases.neo4j.io")
+    NEO4J_USER = os.getenv("NEO4J_USER", "neo4j")
+    NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "")
 
 # ==========================================
 # DEFINICIÓN DE LAS CONSULTAS (TOOLS)
@@ -244,14 +268,16 @@ def consultar_normativa_neo4j(tramo: str, unidad: str, tema: str) -> dict:
       
     // Buscamos MCN y Ejes de forma opcional. Usamos '--' para ignorar el nombre exacto de la relación por seguridad.
     OPTIONAL MATCH (ce)-[:CONTRIBUYE_A]->(mcn:CompetenciaMCN)
-    OPTIONAL MATCH (ce)--(eje:EjeTematico)
+    OPTIONAL MATCH (ce)-[:PERTENECE_A_EJE]->(eje:Eje)
     
-    RETURN 
-        ce.id AS ce_id, 
-        ce.enunciado AS ce_enunciado, 
+    RETURN
+        ce.id AS ce_id,
+        ce.enunciado AS ce_enunciado,
         ce.desarrollo AS ce_desarrollo,
         cont.descripcion AS contenido,
         crit.descripcion AS criterio,
+        cont.pagina AS pagina,
+        cont.pdf_fuente AS pdf_fuente,
         collect(DISTINCT mcn.nombre) AS mcns,
         collect(DISTINCT eje.nombre) AS ejes
     LIMIT 3
@@ -291,6 +317,11 @@ def consultar_normativa_neo4j(tramo: str, unidad: str, tema: str) -> dict:
                 report_lines.append(f"MCN (COMPETENCIAS GENERALES): {', '.join(record['mcns'])}")
             if record['ejes']:
                 report_lines.append(f"EJES TEMÁTICOS: {', '.join(record['ejes'])}")
+            pagina = record.get('pagina')
+            pdf_fuente = record.get('pdf_fuente')
+            if pagina and pdf_fuente:
+                report_lines.append(f"FUENTE_PDF: {pdf_fuente} | PAGINA: {pagina}")
+                report_lines.append(f"BADGE_REF: [[REF:{pdf_fuente}:{pagina}]]")
             report_lines.append("")
 
         print(f"[✅ RESULTADO] Se encontraron {len(records)} registros normativos.")
@@ -306,3 +337,81 @@ def consultar_normativa_neo4j(tramo: str, unidad: str, tema: str) -> dict:
             "status": "error",
             "error_message": f"Error interno al conectar con la base de datos Neo4j: {str(e)}"
         }
+
+
+def buscar_contenido_por_texto(texto: str, tramo: str = "") -> dict:
+    """
+    Busca contenidos curriculares en Neo4j usando búsqueda full-text semántica.
+    Ideal para validar una actividad de planificación existente: dado el texto de
+    una actividad (contenido + meta + plan), devuelve los nodos del programa oficial
+    que mejor coinciden (Competencia, Contenido, Criterio de Logro, Tramo).
+
+    Args:
+        texto (str): Texto libre de la actividad a buscar (ej: "La práctica de escritura: selección del tema").
+        tramo (str): Tramo educativo opcional para filtrar (ej: "Tramo 3", "Grados 3"). Si está vacío, busca en todos.
+
+    Returns:
+        dict: Diccionario con 'status' y 'resultados' (lista de matches con CE, contenido, criterio, tramo).
+    """
+    print(f"\n[🔧 TOOL buscar_contenido_por_texto] Texto: '{texto[:60]}...' | Tramo: '{tramo}'")
+
+    cypher_query = """
+    CALL db.index.fulltext.queryNodes("contenido_ft", $texto) YIELD node AS cont, score
+    MATCH (ce:CompetenciaEspecifica)-[:VINCULA_CON]->(cont)-[:EVALUADO_POR]->(crit:CriterioLogro)
+    MATCH (ce)-[:BELONGS_TO*1..3]->(t:Tramo)
+    WHERE $tramo = "" OR toLower(t.nombre) CONTAINS toLower($tramo)
+    MATCH (ce)-[:BELONGS_TO*1..3]->(u:Unidad)
+    OPTIONAL MATCH (u)-[:BELONGS_TO]->(e:Espacio)
+    RETURN
+        ce.id          AS ce_id,
+        ce.enunciado   AS ce_enunciado,
+        cont.descripcion AS contenido,
+        crit.descripcion AS criterio,
+        t.nombre       AS tramo,
+        u.nombre       AS unidad,
+        e.nombre       AS espacio,
+        cont.pagina    AS pagina,
+        cont.pdf_fuente AS pdf_fuente,
+        score
+    ORDER BY score DESC
+    LIMIT 5
+    """
+
+    try:
+        db_manager = Neo4jManager(uri=NEO4J_URI, user=NEO4J_USER, password=NEO4J_PASSWORD)
+        if not db_manager.driver:
+            return {"status": "error", "error_message": "No se pudo conectar con Neo4j."}
+
+        with db_manager.driver.session() as session:
+            result = session.run(cypher_query, texto=texto, tramo=tramo)
+            records = list(result)
+        db_manager.close()
+
+        if not records:
+            print("[⚠️ RESULTADO] Sin matches en el índice full-text.")
+            return {
+                "status": "not_found",
+                "error_message": f"No se encontraron contenidos que coincidan con: '{texto}'. Intenta reformular con términos del programa oficial."
+            }
+
+        resultados = []
+        for r in records:
+            resultados.append({
+                "score":      round(r["score"], 2),
+                "ce_id":      r["ce_id"],
+                "enunciado":  r["ce_enunciado"],
+                "contenido":  r["contenido"],
+                "criterio":   r["criterio"],
+                "tramo":      r["tramo"],
+                "unidad":     r["unidad"],
+                "espacio":    r["espacio"],
+                "pagina":     r["pagina"],
+                "pdf_fuente": r["pdf_fuente"],
+            })
+
+        print(f"[✅ RESULTADO] {len(resultados)} matches encontrados.")
+        return {"status": "success", "resultados": resultados}
+
+    except Exception as e:
+        print(f"[❌ ERROR] {str(e)}")
+        return {"status": "error", "error_message": str(e)}
