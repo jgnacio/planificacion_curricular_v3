@@ -1,11 +1,32 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Button, Card, Chip, Spinner } from "@heroui/react";
-import { createAdkSession, sendAdkMessage } from "../../api-actions";
+import { Button, Card } from "@heroui/react";
+import { createAdkSession, sendAdkMessage, type PdfRef } from "../../api-actions";
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001";
 
 type Role = "user" | "agent" | "error";
-type Message = { id: string; role: Role; text: string };
+type Message = { id: string; role: Role; text: string; refs: PdfRef[] };
+
+// ── Token parsers ─────────────────────────────────────────────────────────────
+// Regex instances created per-call to avoid shared lastIndex state with /g flag
+function parseOptions(text: string): string[] {
+  return [...text.matchAll(/\[\[(?!REF:)([^\]]+)\]\]/g)].map((m) => m[1]);
+}
+function parseMultiOptions(text: string): string[] {
+  return [...text.matchAll(/\(\(([^)]+)\)\)/g)].map((m) => m[1]);
+}
+function stripTokens(text: string): string {
+  return text
+    .replace(/\[\[REF:[^\]]+\]\]/g, "")
+    .replace(/\[\[(?!REF:)[^\]]+\]\]/g, "")
+    .replace(/\(\([^)]+\)\)/g, "")
+    .replace(/BADGE_REF:.*/g, "")
+    .replace(/FUENTE_PDF:.*/g, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
 
 const SESSION_ID = `web-${Math.random().toString(36).slice(2, 10)}`;
 
@@ -58,13 +79,14 @@ export default function AsistenteTab() {
     const t = text.trim();
     if (!t || loading || !sessionReady) return;
     setInput("");
-    setMessages((prev) => [...prev, { id: crypto.randomUUID(), role: "user", text: t }]);
+    setMessages((prev) => [...prev, { id: crypto.randomUUID(), role: "user", text: t, refs: [] }]);
     setLoading(true);
     const reply = await sendAdkMessage(SESSION_ID, t);
     setMessages((prev) => [...prev, {
       id: crypto.randomUUID(),
-      role: reply.startsWith("Error") ? "error" : "agent",
-      text: reply,
+      role: reply.text.startsWith("Error") ? "error" : "agent",
+      text: reply.text,
+      refs: reply.refs,
     }]);
     setLoading(false);
   };
@@ -129,7 +151,7 @@ export default function AsistenteTab() {
           </div>
         )}
 
-        {messages.map((msg) => <Bubble key={msg.id} message={msg} />)}
+        {messages.map((msg) => <Bubble key={msg.id} message={msg} onOptionClick={send} />)}
         {loading && <TypingIndicator />}
         <div ref={bottomRef} />
       </div>
@@ -168,13 +190,17 @@ export default function AsistenteTab() {
 
 // ── Bubble ────────────────────────────────────────────────────────────────────
 
-function Bubble({ message }: { message: Message }) {
+function Bubble({ message, onOptionClick }: { message: Message; onOptionClick: (t: string) => void }) {
   const isUser  = message.role === "user";
   const isError = message.role === "error";
   const [copied, setCopied] = useState(false);
 
+  const bodyText     = isUser ? message.text : stripTokens(message.text);
+  const options      = isUser ? [] : parseOptions(message.text);
+  const multiOptions = isUser ? [] : parseMultiOptions(message.text);
+
   const copy = () => {
-    navigator.clipboard.writeText(message.text);
+    navigator.clipboard.writeText(bodyText);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   };
@@ -182,6 +208,7 @@ function Bubble({ message }: { message: Message }) {
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
       <div className={`max-w-[80%] flex flex-col gap-1 ${isUser ? "items-end" : "items-start"}`}>
+        {/* Bubble body */}
         {isUser ? (
           <div className="px-4 py-3 rounded-2xl rounded-br-sm bg-accent text-accent-foreground text-sm leading-relaxed">
             {message.text}
@@ -191,21 +218,106 @@ function Bubble({ message }: { message: Message }) {
             variant={isError ? "transparent" : "secondary"}
             className={`px-4 py-3 rounded-2xl rounded-bl-sm ${isError ? "border border-danger/30 text-danger" : ""}`}
           >
-            <div className="space-y-1">{renderMarkdown(message.text)}</div>
+            <div className="space-y-1">{renderMarkdown(bodyText)}</div>
           </Card>
         )}
+
+        {/* Copy button */}
         {!isUser && (
           <button
             onClick={copy}
             className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors px-1"
           >
-            {copied
-              ? <><span className="text-success">✓</span> Copiado</>
-              : <><CopyIcon /> Copiar</>
-            }
+            {copied ? <><span className="text-success">✓</span> Copiado</> : <><CopyIcon /> Copiar</>}
           </button>
         )}
+
+        {/* Single-select options */}
+        {options.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-1">
+            {options.map((opt) => (
+              <button
+                key={opt}
+                onClick={() => onOptionClick(opt)}
+                className="px-3 py-1.5 rounded-xl border border-border text-xs font-medium text-foreground hover:bg-muted hover:border-accent transition-all"
+              >
+                {opt}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Multi-select options */}
+        {multiOptions.length > 0 && (
+          <MultiSelect options={multiOptions} onConfirm={onOptionClick} />
+        )}
+
+        {/* PDF reference badges */}
+        {message.refs.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-2">
+            {message.refs.map((ref, i) => (
+              <a
+                key={i}
+                href={`${API_BASE}/pdfs/${encodeURIComponent(ref.filename)}#page=${ref.page}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 text-xs font-medium hover:bg-blue-100 transition-colors"
+              >
+                <PdfIcon />
+                {ref.label || `${ref.filename} p.${ref.page}`}
+              </a>
+            ))}
+          </div>
+        )}
       </div>
+    </div>
+  );
+}
+
+// ── MultiSelect ───────────────────────────────────────────────────────────────
+
+function MultiSelect({ options, onConfirm }: { options: string[]; onConfirm: (t: string) => void }) {
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const toggle = (opt: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.has(opt) ? next.delete(opt) : next.add(opt);
+      return next;
+    });
+
+  const confirm = () => {
+    if (selected.size === 0) return;
+    const ordered = options.filter((o) => selected.has(o)).join(", ");
+    onConfirm(ordered);
+  };
+
+  return (
+    <div className="flex flex-col gap-2 mt-1">
+      <div className="flex flex-wrap gap-2">
+        {options.map((opt) => (
+          <button
+            key={opt}
+            onClick={() => toggle(opt)}
+            className={`px-3 py-1.5 rounded-xl border text-xs font-medium transition-all ${
+              selected.has(opt)
+                ? "border-accent bg-accent/10 text-accent"
+                : "border-border text-foreground hover:bg-muted"
+            }`}
+          >
+            {selected.has(opt) && <span className="mr-1">✓</span>}
+            {opt}
+          </button>
+        ))}
+      </div>
+      {selected.size > 0 && (
+        <button
+          onClick={confirm}
+          className="self-start px-4 py-1.5 rounded-xl bg-accent text-accent-foreground text-xs font-semibold hover:opacity-90 transition-opacity"
+        >
+          Confirmar ({selected.size})
+        </button>
+      )}
     </div>
   );
 }
@@ -255,6 +367,14 @@ function CopyIcon() {
     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
       <rect x="9" y="9" width="13" height="13" rx="2" />
       <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+    </svg>
+  );
+}
+function PdfIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
     </svg>
   );
 }

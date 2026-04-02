@@ -1,68 +1,75 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useTheme } from "next-themes";
+import { UserButton } from "@clerk/nextjs";
 import { Button, Card, Chip, Separator } from "@heroui/react";
+import {
+  LayoutDashboard,
+  FileText,
+  Users,
+  MessageSquare,
+  BookOpen,
+  Sun,
+  Moon,
+  type IconNode,
+} from "lucide";
 import DashboardTab from "./tabs/DashboardTab";
 import PlanificacionesTab from "./tabs/PlanificacionesTab";
 import AlumnosTab from "./tabs/AlumnosTab";
 import AsistenteTab from "./tabs/AsistenteTab";
-import CurricularSelector from "./CurricularSelector";
+import ProgramaTab from "./tabs/ProgramaTab";
 
 export type Tab = "dashboard" | "planificaciones" | "alumnos" | "asistente" | "programa";
 
-const NAV: { id: Tab; label: string; icon: React.ReactNode }[] = [
-  {
-    id: "dashboard",
-    label: "Inicio",
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-        <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
-        <rect x="14" y="14" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" />
-      </svg>
-    ),
-  },
-  {
-    id: "planificaciones",
-    label: "Planificaciones",
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-        <polyline points="14 2 14 8 20 8" />
-        <line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" />
-      </svg>
-    ),
-  },
-  {
-    id: "alumnos",
-    label: "Alumnos",
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-        <circle cx="9" cy="7" r="4" />
-        <path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
-      </svg>
-    ),
-  },
-  {
-    id: "asistente",
-    label: "Asistente",
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-      </svg>
-    ),
-  },
-  {
-    id: "programa",
-    label: "Programa",
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
-        <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
-      </svg>
-    ),
-  },
+type IconProps = { icon: IconNode; size?: number; stroke?: string; strokeWidth?: number };
+
+function Icon({ icon, size = 16, stroke = "currentColor", strokeWidth = 2 }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={stroke}
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      {icon.map(([tag, attrs], i) => {
+        const El = tag as keyof JSX.IntrinsicElements;
+        return <El key={i} {...(attrs as object)} />;
+      })}
+    </svg>
+  );
+}
+
+const NAV: { id: Tab; label: string; icon: IconNode }[] = [
+  { id: "dashboard",       label: "Inicio",          icon: LayoutDashboard },
+  { id: "planificaciones", label: "Planificaciones",  icon: FileText        },
+  { id: "alumnos",         label: "Alumnos",          icon: Users           },
+  { id: "asistente",       label: "Asistente",        icon: MessageSquare   },
+  { id: "programa",        label: "Programa",         icon: BookOpen        },
 ];
+
+function ThemeToggle() {
+  const { resolvedTheme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
+
+  if (!mounted) return <div className="w-[27px] h-[27px]" />;
+
+  return (
+    <button
+      onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+      className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+      aria-label="Cambiar tema"
+    >
+      <Icon icon={resolvedTheme === "dark" ? Sun : Moon} size={15} />
+    </button>
+  );
+}
 
 export default function AppShell() {
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
@@ -76,10 +83,7 @@ export default function AppShell() {
         <div className="px-4 py-5">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-xl bg-accent flex items-center justify-center flex-shrink-0">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
-                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
-              </svg>
+              <Icon icon={BookOpen} size={16} stroke="white" strokeWidth={2.5} />
             </div>
             <div className="min-w-0">
               <p className="text-sm font-bold text-foreground leading-none">Facilitador</p>
@@ -105,7 +109,7 @@ export default function AppShell() {
                     : "text-muted-foreground hover:bg-muted hover:text-foreground",
                 ].join(" ")}
               >
-                <span className={isActive ? "text-accent" : ""}>{item.icon}</span>
+                <Icon icon={item.icon} />
                 {item.label}
               </button>
             );
@@ -113,10 +117,14 @@ export default function AppShell() {
         </nav>
 
         <Separator />
-        <div className="px-4 py-3">
-          <Chip variant="soft" color="default" size="sm" className="w-full justify-center">
+        <div className="px-4 py-3 flex items-center justify-between">
+          <Chip variant="soft" color="default" size="sm">
             Beta v0.1
           </Chip>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <UserButton afterSignOutUrl="/sign-in" />
+          </div>
         </div>
       </aside>
 
@@ -127,19 +135,20 @@ export default function AppShell() {
         <div className="md:hidden flex items-center justify-between px-4 py-3 border-b border-border bg-[var(--surface)]">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-lg bg-accent flex items-center justify-center">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={2.5}>
-                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
-                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
-              </svg>
+              <Icon icon={BookOpen} size={13} stroke="white" strokeWidth={2.5} />
             </div>
             <span className="text-sm font-bold">Facilitador EBI</span>
           </div>
-          <Chip variant="soft" size="sm">Beta v0.1</Chip>
+          <div className="flex items-center gap-2">
+            <Chip variant="soft" size="sm">Beta v0.1</Chip>
+            <ThemeToggle />
+            <UserButton afterSignOutUrl="/sign-in" />
+          </div>
         </div>
 
         {/* Tab content */}
         <div className="flex-1 overflow-y-auto">
-          {activeTab === "dashboard"      && <DashboardTab onNavigate={(t) => setActiveTab(t as Tab)} />}
+          {activeTab === "dashboard"       && <DashboardTab onNavigate={(t) => setActiveTab(t as Tab)} />}
           {activeTab === "planificaciones" && <PlanificacionesTab />}
           {activeTab === "alumnos"         && <AlumnosTab />}
           {activeTab === "asistente"       && (
@@ -147,21 +156,7 @@ export default function AppShell() {
               <AsistenteTab />
             </div>
           )}
-          {activeTab === "programa" && (
-            <div className="p-6 max-w-5xl w-full mx-auto">
-              <div className="mb-6">
-                <h2 className="text-xl font-bold text-foreground">Explorador del Programa EBI</h2>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Navegá la estructura curricular: ciclos, espacios, unidades, contenidos, competencias y criterios de logro.
-                </p>
-              </div>
-              <Card>
-                <Card.Content className="p-6">
-                  <CurricularSelector />
-                </Card.Content>
-              </Card>
-            </div>
-          )}
+          {activeTab === "programa" && <ProgramaTab />}
         </div>
 
         {/* Mobile bottom nav */}
@@ -177,7 +172,7 @@ export default function AppShell() {
                   isActive ? "text-accent" : "text-muted-foreground",
                 ].join(" ")}
               >
-                {item.icon}
+                <Icon icon={item.icon} />
                 {item.label}
               </button>
             );
@@ -187,4 +182,3 @@ export default function AppShell() {
     </div>
   );
 }
-

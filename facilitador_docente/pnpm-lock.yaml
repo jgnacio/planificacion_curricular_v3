@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@clerk/nextjs':
+        specifier: ^7.0.7
+        version: 7.0.7(next@16.1.6(@babel/core@7.29.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       '@heroui/react':
         specifier: ^3.0.1
         version: 3.0.1(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(tailwindcss@4.2.1)
@@ -26,6 +29,9 @@ importers:
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
+      lucide:
+        specifier: ^1.3.0
+        version: 1.3.0
       lucide-react:
         specifier: ^0.575.0
         version: 0.575.0(react@19.2.3)
@@ -283,6 +289,37 @@ packages:
     engines: {node: '>=14.21.3'}
     cpu: [x64]
     os: [win32]
+
+  '@clerk/backend@3.2.3':
+    resolution: {integrity: sha512-I3YLnSioYFG+EVFBYm0ilN28+FC8H+hkqMgB5Pdl7AcotQOn3JhiZMqLel2H0P390p8FEJKQNnrvXk3BemeKKQ==}
+    engines: {node: '>=20.9.0'}
+
+  '@clerk/nextjs@7.0.7':
+    resolution: {integrity: sha512-Iqg4q0ns1LZZrAdC66r/QUFMY+Rs3HAJcAb/IR0uFBj7ZAZusxdVKMmNkZP9UP6sk3OOorCsJTdE0rTMoXD2YQ==}
+    engines: {node: '>=20.9.0'}
+    peerDependencies:
+      next: ^15.2.8 || ^15.3.8 || ^15.4.10 || ^15.5.9 || ^15.6.0-0 || ^16.0.10 || ^16.1.0-0
+      react: ^18.0.0 || ~19.0.3 || ~19.1.4 || ~19.2.3 || ~19.3.0-0
+      react-dom: ^18.0.0 || ~19.0.3 || ~19.1.4 || ~19.2.3 || ~19.3.0-0
+
+  '@clerk/react@6.1.3':
+    resolution: {integrity: sha512-9t5C8eM5cTmOmpBO5nb8FDA40biQqeQLUW+cVwAE0t5hnGRwiC6mSv83vqHg+9qQBqtliR013BGVjpCz53gVCA==}
+    engines: {node: '>=20.9.0'}
+    peerDependencies:
+      react: ^18.0.0 || ~19.0.3 || ~19.1.4 || ~19.2.3 || ~19.3.0-0
+      react-dom: ^18.0.0 || ~19.0.3 || ~19.1.4 || ~19.2.3 || ~19.3.0-0
+
+  '@clerk/shared@4.3.2':
+    resolution: {integrity: sha512-tYYzdY4Fxb02TO4RHoLRFzEjXJn0iFDfoKhWtGyqf2AaIgkprTksunQtX0hnVssHMr3XD/E2S00Vrb+PzX3jCQ==}
+    engines: {node: '>=20.9.0'}
+    peerDependencies:
+      react: ^18.0.0 || ~19.0.3 || ~19.1.4 || ~19.2.3 || ~19.3.0-0
+      react-dom: ^18.0.0 || ~19.0.3 || ~19.1.4 || ~19.2.3 || ~19.3.0-0
+    peerDependenciesMeta:
+      react:
+        optional: true
+      react-dom:
+        optional: true
 
   '@dotenvx/dotenvx@1.52.0':
     resolution: {integrity: sha512-CaQcc8JvtzQhUSm9877b6V4Tb7HCotkcyud9X2YwdqtQKwgljkMRwU96fVYKnzN3V0Hj74oP7Es+vZ0mS+Aa1w==}
@@ -1990,6 +2027,9 @@ packages:
     resolution: {integrity: sha512-tlqY9xq5ukxTUZBmoOp+m61cqwQD5pHJtFY3Mn8CA8ps6yghLH/Hw8UPdqg4OLmFW3IFlcXnQNmo/dh8HzXYIQ==}
     engines: {node: '>=18'}
 
+  '@stablelib/base64@1.0.1':
+    resolution: {integrity: sha512-1bnPQqSxSuc3Ii6MhBysoWCg58j97aUjuCSZrGSmDxNqtytIi0k8utUenAwTZN4V5mXXYGsVUI9zeBqy+jBOSQ==}
+
   '@swc/helpers@0.5.15':
     resolution: {integrity: sha512-JQ5TuMi45Owi4/BIMAJBoSQoOJu12oOk/gADqlcUL9JEdHB8vyjUSsxqeNXnmXHjYKMi2WcYtezGEEhqUI/E2g==}
 
@@ -2084,6 +2124,9 @@ packages:
 
   '@tailwindcss/postcss@4.2.1':
     resolution: {integrity: sha512-OEwGIBnXnj7zJeonOh6ZG9woofIjGrd2BORfvE5p9USYKDCZoQmfqLcfNiRWoJlRWLdNPn2IgVZuWAOM4iTYMw==}
+
+  '@tanstack/query-core@5.90.16':
+    resolution: {integrity: sha512-MvtWckSVufs/ja463/K4PyJeqT+HMlJWtw6PrCpywznd2NSgO3m4KwO9RqbFqGg6iDE8vVMFWMeQI4Io3eEYww==}
 
   '@tanstack/query-core@5.90.20':
     resolution: {integrity: sha512-OMD2HLpNouXEfZJWcKeVKUgQ5n+n3A2JFmBaScpNDUqSrQSjiveC7dKMe53uJUg1nDG16ttFPz2xfilz6i2uVg==}
@@ -2354,6 +2397,10 @@ packages:
     resolution: {integrity: sha512-g7nH6P6dyDioJogAAGprGpCtVImJhpPk/roCzdb3fIh61/s/nPsfR6onyMwkCAR/OlC3yBC0lESvUoQEAssIrw==}
     engines: {node: '>= 0.8'}
 
+  dequal@2.0.3:
+    resolution: {integrity: sha512-0je+qPKHEMohvfRTCEo3CrPG6cAzAYgmzKyxRiYSSDkS6eGJdyVJm7WaYA5ECaAD9wLB2T4EEeymA5aFVcYXCA==}
+    engines: {node: '>=6'}
+
   detect-libc@2.1.2:
     resolution: {integrity: sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ==}
     engines: {node: '>=8'}
@@ -2465,6 +2512,9 @@ packages:
     resolution: {integrity: sha512-7MptL8U0cqcFdzIzwOTHoilX9x5BrNqye7Z/LuC7kCMRio1EMSyqRK3BEAUD7sXRq4iT4AzTVuZdhgQ2TCvYLg==}
     engines: {node: '>=8.6.0'}
 
+  fast-sha256@1.3.0:
+    resolution: {integrity: sha512-n11RGP/lrWEFI/bWdygLxhI+pVeo1ZYIVwvvPkW7azl/rOy+F3HYRZ2K5zeE9mmkhQppyv9sQFx0JM9UabnpPQ==}
+
   fast-uri@3.1.0:
     resolution: {integrity: sha512-iPeeDKJSWf4IEOasVVrknXpaBV0IApz/gp7S2bb7Z4Lljbl2MGJRqInZiUrQwV16cpzw/D3S5j5Julj/gT52AA==}
 
@@ -2574,6 +2624,9 @@ packages:
   glob-parent@5.1.2:
     resolution: {integrity: sha512-AOIgSQCepiJYwP3ARnGx+5VnTu2HBYdzbGP45eLw1vr3zB3vZLeyed1sC9hnbcOc9/SrMyM5RPQrkGz4aS9Zow==}
     engines: {node: '>= 6'}
+
+  glob-to-regexp@0.4.1:
+    resolution: {integrity: sha512-lkX1HJXwyMcprw/5YUZc2s7DrpAiHB21/V+E1rHUrVNokkvB6bqMzT0VfV6/86ZNabt1k14YOIaT7nDvOX3Iiw==}
 
   gopd@1.2.0:
     resolution: {integrity: sha512-ZUKRh6/kUFoAiTAtTYPZJ3hw9wNxx+BIBOijnlG9PnrJsCcSjs1wyyD6vJpaYtgnzDrKYRSqf3OO6Rfa93xsRg==}
@@ -2741,6 +2794,10 @@ packages:
   jose@6.1.3:
     resolution: {integrity: sha512-0TpaTfihd4QMNwrz/ob2Bp7X04yuxJkjRGi4aKmOqwhov54i6u79oCv7T+C7lo70MKH6BesI3vscD1yb/yzKXQ==}
 
+  js-cookie@3.0.5:
+    resolution: {integrity: sha512-cEiJEAEoIbWfCZYKWhVwFuvPX1gETRYPw6LlaTKoxD3s2AkXzkCjnp6h0V77ozyqj0jakteJ4YqDJT830+lVGw==}
+    engines: {node: '>=14'}
+
   js-tokens@4.0.0:
     resolution: {integrity: sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==}
 
@@ -2866,6 +2923,9 @@ packages:
     resolution: {integrity: sha512-VuXgKZrk0uiDlWjGGXmKV6MSk9Yy4l10qgVvzGn2AWBx1Ylt0iBexKOAoA6I7JO3m+M9oeovJd3yYENfkUbOeg==}
     peerDependencies:
       react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
+
+  lucide@1.3.0:
+    resolution: {integrity: sha512-8/98ZCQjNDdfOjSycUujwqxKNrq97WPzdlNBR6tG7BqZgiOFQqzJuFapIpjPceW57sJv3zGIBg0L3SWR7c4fqA==}
 
   magic-string@0.30.21:
     resolution: {integrity: sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ==}
@@ -3287,6 +3347,9 @@ packages:
     resolution: {integrity: sha512-xRXBn0pPqQTVQiC8wyQrKs2MOlX24zQ0POGaj0kultvoOCstBQM5yvOhAVSUwOMjQtTvsPWoNCHfPGwaaQJhTw==}
     engines: {node: '>= 18'}
 
+  server-only@0.0.1:
+    resolution: {integrity: sha512-qepMx2JxAa5jjfzxG79yPPq+8BuFToHd1hm7kI+Z4zAq1ftQiP7HcxMhDDItrbtwVeLg/cY2JnKnrcFkmiswNA==}
+
   setprototypeof@1.2.0:
     resolution: {integrity: sha512-E5LDX7Wrp85Kil5bhZv46j8jOeboKq5JMmYM3gVGdGH8xFpPWXUMsNrlODCrkoxMEeNi/XZIwuRvY4XNwYMJpw==}
 
@@ -3346,9 +3409,15 @@ packages:
     resolution: {integrity: sha512-UjgapumWlbMhkBgzT7Ykc5YXUT46F0iKu8SGXq0bcwP5dz/h0Plj6enJqjz1Zbq2l5WaqYnrVbwWOWMyF3F47g==}
     engines: {node: '>=0.10.0'}
 
+  standardwebhooks@1.0.0:
+    resolution: {integrity: sha512-BbHGOQK9olHPMvQNHWul6MYlrRTAOKn03rOe4A8O3CLWhNf4YHBqq2HJKKC+sfqpxiBY52pNeesD6jIiLDz8jg==}
+
   statuses@2.0.2:
     resolution: {integrity: sha512-DvEy55V3DB7uknRo+4iOGT5fP1slR8wQohVdknigZPMpMstaKJQWhwiYBACJE3Ul2pTnATihhBYnRhZQHGBiRw==}
     engines: {node: '>= 0.8'}
+
+  std-env@3.10.0:
+    resolution: {integrity: sha512-5GS12FdOZNliM5mAOxFRg7Ir0pWz8MdpYm6AY6VPkGpbA7ZzmbzNcBJQ0GPvvyWgcY7QAhCgf9Uy89I03faLkg==}
 
   stdin-discarder@0.2.2:
     resolution: {integrity: sha512-UhDfHmA92YAlNnCfhmq0VeNL5bDbiZGg7sZ2IvPsXubGkiNa9EC+tUTsjBRsYUAz87btI6/1wf4XoVvQ3uRnmQ==}
@@ -3835,6 +3904,44 @@ snapshots:
 
   '@biomejs/cli-win32-x64@2.2.0':
     optional: true
+
+  '@clerk/backend@3.2.3(react-dom@19.2.3(react@19.2.3))(react@19.2.3)':
+    dependencies:
+      '@clerk/shared': 4.3.2(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+      standardwebhooks: 1.0.0
+      tslib: 2.8.1
+    transitivePeerDependencies:
+      - react
+      - react-dom
+
+  '@clerk/nextjs@7.0.7(next@16.1.6(@babel/core@7.29.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)':
+    dependencies:
+      '@clerk/backend': 3.2.3(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+      '@clerk/react': 6.1.3(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+      '@clerk/shared': 4.3.2(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+      next: 16.1.6(@babel/core@7.29.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+      react: 19.2.3
+      react-dom: 19.2.3(react@19.2.3)
+      server-only: 0.0.1
+      tslib: 2.8.1
+
+  '@clerk/react@6.1.3(react-dom@19.2.3(react@19.2.3))(react@19.2.3)':
+    dependencies:
+      '@clerk/shared': 4.3.2(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+      react: 19.2.3
+      react-dom: 19.2.3(react@19.2.3)
+      tslib: 2.8.1
+
+  '@clerk/shared@4.3.2(react-dom@19.2.3(react@19.2.3))(react@19.2.3)':
+    dependencies:
+      '@tanstack/query-core': 5.90.16
+      dequal: 2.0.3
+      glob-to-regexp: 0.4.1
+      js-cookie: 3.0.5
+      std-env: 3.10.0
+    optionalDependencies:
+      react: 19.2.3
+      react-dom: 19.2.3(react@19.2.3)
 
   '@dotenvx/dotenvx@1.52.0':
     dependencies:
@@ -6019,6 +6126,8 @@ snapshots:
 
   '@sindresorhus/merge-streams@4.0.0': {}
 
+  '@stablelib/base64@1.0.1': {}
+
   '@swc/helpers@0.5.15':
     dependencies:
       tslib: 2.8.1
@@ -6091,6 +6200,8 @@ snapshots:
       '@tailwindcss/oxide': 4.2.1
       postcss: 8.5.6
       tailwindcss: 4.2.1
+
+  '@tanstack/query-core@5.90.16': {}
 
   '@tanstack/query-core@5.90.20': {}
 
@@ -6315,6 +6426,8 @@ snapshots:
 
   depd@2.0.0: {}
 
+  dequal@2.0.3: {}
+
   detect-libc@2.1.2: {}
 
   detect-node-es@1.1.0: {}
@@ -6454,6 +6567,8 @@ snapshots:
       merge2: 1.4.1
       micromatch: 4.0.8
 
+  fast-sha256@1.3.0: {}
+
   fast-uri@3.1.0: {}
 
   fastq@1.20.1:
@@ -6555,6 +6670,8 @@ snapshots:
   glob-parent@5.1.2:
     dependencies:
       is-glob: 4.0.3
+
+  glob-to-regexp@0.4.1: {}
 
   gopd@1.2.0: {}
 
@@ -6674,6 +6791,8 @@ snapshots:
 
   jose@6.1.3: {}
 
+  js-cookie@3.0.5: {}
+
   js-tokens@4.0.0: {}
 
   js-yaml@4.1.1:
@@ -6763,6 +6882,8 @@ snapshots:
   lucide-react@0.575.0(react@19.2.3):
     dependencies:
       react: 19.2.3
+
+  lucide@1.3.0: {}
 
   magic-string@0.30.21:
     dependencies:
@@ -7323,6 +7444,8 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  server-only@0.0.1: {}
+
   setprototypeof@1.2.0: {}
 
   shadcn@3.8.5(@types/node@20.19.35)(typescript@5.9.3):
@@ -7450,7 +7573,14 @@ snapshots:
 
   source-map@0.6.1: {}
 
+  standardwebhooks@1.0.0:
+    dependencies:
+      '@stablelib/base64': 1.0.1
+      fast-sha256: 1.3.0
+
   statuses@2.0.2: {}
+
+  std-env@3.10.0: {}
 
   stdin-discarder@0.2.2: {}
 

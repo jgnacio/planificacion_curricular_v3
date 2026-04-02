@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
@@ -6,10 +7,9 @@ import '../providers/chat_providers.dart';
 import '../../../../core/widgets/pdf_reference_badge.dart';
 
 // [[Opción]] → single-select: tap sends immediately.
-// [[REF:archivo.pdf:42]] → PDF reference badge (distinguished by REF: prefix).
 final _optionRegex = RegExp(r'\[\[(?!REF:)([^\]]+)\]\]');
 
-// [[REF:archivo.pdf:42]] → clickable PDF badge opening page 42.
+// [[REF:archivo.pdf:42]] → legacy inline badge (fallback for old responses).
 final _refRegex = RegExp(r'\[\[REF:([^:]+):(\d+)\]\]');
 
 // ((Opción)) → multi-select: user picks several, then confirms.
@@ -22,21 +22,48 @@ List<String> _parseMultiOptions(String text) =>
     _multiOptionRegex.allMatches(text).map((m) => m.group(1)!).toList();
 
 class _PdfRef {
-  const _PdfRef(this.pdfFuente, this.pagina);
+  const _PdfRef(this.pdfFuente, this.pagina, {this.label = ''});
   final String pdfFuente;
   final int pagina;
+  final String label;
 }
 
-List<_PdfRef> _parseRefs(String text) => _refRegex
-    .allMatches(text)
-    .map((m) => _PdfRef(m.group(1)!, int.parse(m.group(2)!)))
-    .toList();
+// Parses the agent response, which may be:
+//   (a) JSON: {"text": "...", "refs": [{"filename": "...", "page": 23, "label": "..."}]}
+//   (b) Legacy plain text with [[REF:...]] inline tokens
+({String text, List<_PdfRef> refs}) _parseContent(String raw) {
+  try {
+    final decoded = jsonDecode(raw);
+    if (decoded is Map && decoded['text'] is String) {
+      final text = decoded['text'] as String;
+      final refsRaw = decoded['refs'];
+      final refs = <_PdfRef>[];
+      if (refsRaw is List) {
+        for (final r in refsRaw) {
+          if (r is Map && r['filename'] is String && r['page'] is num) {
+            refs.add(_PdfRef(
+              r['filename'] as String,
+              (r['page'] as num).toInt(),
+              label: r['label'] as String? ?? '',
+            ));
+          }
+        }
+      }
+      return (text: text, refs: refs);
+    }
+  } catch (_) {}
+  // Fallback: legacy format — refs were [[REF:...]] tokens in the text
+  final legacyRefs = _refRegex
+      .allMatches(raw)
+      .map((m) => _PdfRef(m.group(1)!, int.parse(m.group(2)!)))
+      .toList();
+  return (text: raw, refs: legacyRefs);
+}
 
-String _stripOptions(String text) => text
+String _stripTokens(String text) => text
     .replaceAll(_refRegex, '')
     .replaceAll(_optionRegex, '')
     .replaceAll(_multiOptionRegex, '')
-    // Also strip raw BADGE_REF / FUENTE_PDF lines the agent may echo
     .replaceAll(RegExp(r'BADGE_REF:.*'), '')
     .replaceAll(RegExp(r'FUENTE_PDF:.*'), '')
     .replaceAll(RegExp(r'\n{3,}'), '\n\n')
@@ -188,11 +215,14 @@ class _MessageBubble extends StatelessWidget {
     final isUser = message.sender == MessageSender.user;
     final theme = Theme.of(context);
 
-    // Strip all option/ref tokens from displayed text
-    final bodyText = isUser ? message.text : _stripOptions(message.text);
-    final options = isUser ? <String>[] : _parseOptions(message.text);
-    final multiOptions = isUser ? <String>[] : _parseMultiOptions(message.text);
-    final refs = isUser ? <_PdfRef>[] : _parseRefs(message.text);
+    // Parse structured JSON response (or fall back to legacy regex)
+    final content = isUser
+        ? (text: message.text, refs: <_PdfRef>[])
+        : _parseContent(message.text);
+    final bodyText = isUser ? message.text : _stripTokens(content.text);
+    final options = isUser ? <String>[] : _parseOptions(content.text);
+    final multiOptions = isUser ? <String>[] : _parseMultiOptions(content.text);
+    final refs = content.refs;
 
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,

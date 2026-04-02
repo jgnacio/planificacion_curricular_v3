@@ -1,15 +1,19 @@
 @import "tailwindcss";
 @import "@heroui/styles";
 
-/* ── ANEP / EBI brand colors ─────────────────────────────────────────────── */
+/* ── ANEP / EBI brand colors — light ────────────────────────────────────── */
 :root {
-  /* ANEP blue → HeroUI accent */
   --accent: oklch(0.4204 0.185 253.83);
   --accent-foreground: oklch(0.98 0 0);
-
-  /* EBI green → success palette */
   --success: oklch(0.4 0.14 145);
   --success-foreground: oklch(0.98 0 0);
+  --surface: oklch(0.97 0 0);
+}
+
+/* ── dark mode overrides ─────────────────────────────────────────────────── */
+.dark {
+  --accent: oklch(0.62 0.18 253.83);
+  --surface: oklch(0.13 0 0);
 }
 
 html,

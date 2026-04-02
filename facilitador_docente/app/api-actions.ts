@@ -1,9 +1,10 @@
 "use server";
 
+import { auth } from "@clerk/nextjs/server";
+
 const API_URL = process.env.API_URL ?? "http://localhost:8001";
 const ADK_URL = process.env.ADK_URL ?? "http://localhost:8000";
 const ADK_APP = "teacher_agent";
-const ADK_USER = "docente_default";
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 
@@ -111,9 +112,14 @@ export async function createAlumno(data: {
 
 // ── ADK Chat ──────────────────────────────────────────────────────────────────
 
+export type PdfRef = { filename: string; page: number; label: string };
+export type AgentResponse = { text: string; refs: PdfRef[] };
+
 export async function createAdkSession(sessionId: string): Promise<void> {
+  const { userId } = await auth();
+  const adkUser = userId ?? "anonymous";
   try {
-    await fetch(`${ADK_URL}/apps/${ADK_APP}/users/${ADK_USER}/sessions`, {
+    await fetch(`${ADK_URL}/apps/${ADK_APP}/users/${adkUser}/sessions`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ sessionId }),
@@ -126,28 +132,44 @@ export async function createAdkSession(sessionId: string): Promise<void> {
 export async function sendAdkMessage(
   sessionId: string,
   text: string
-): Promise<string> {
+): Promise<AgentResponse> {
+  const { userId } = await auth();
+  const adkUser = userId ?? "anonymous";
   try {
     const res = await fetch(`${ADK_URL}/run`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         appName: ADK_APP,
-        userId: ADK_USER,
+        userId: adkUser,
         sessionId,
         newMessage: { role: "user", parts: [{ text }] },
         stateDelta: {},
       }),
     });
-    if (!res.ok) return "Error al contactar el agente.";
+    if (!res.ok) return { text: "Error al contactar el agente.", refs: [] };
     const data = await res.json();
     return parseAdkResponse(data);
   } catch (e) {
-    return `Error de conexión: ${e}`;
+    return { text: `Error de conexión: ${e}`, refs: [] };
   }
 }
 
-function parseAdkResponse(data: unknown): string {
+// ── Curriculum estructurado ───────────────────────────────────────────────────
+
+export type CurriculumEstructura = { tramos: Record<string, any> };
+
+export async function getCurriculumEstructura(): Promise<CurriculumEstructura> {
+  try {
+    const res = await fetch(`${API_URL}/curriculum/estructura`, { cache: "no-store" });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  } catch {
+    return { tramos: {} };
+  }
+}
+
+function parseAdkResponse(data: unknown): AgentResponse {
   const buf: string[] = [];
 
   function process(msg: unknown) {
@@ -157,8 +179,8 @@ function parseAdkResponse(data: unknown): string {
     if (Array.isArray(m.parts)) {
       for (const p of m.parts) {
         if (typeof p === "string") buf.push(p);
-        else if (typeof p === "object" && p && typeof (p as Record<string,unknown>).text === "string")
-          buf.push((p as Record<string,unknown>).text as string);
+        else if (typeof p === "object" && p && typeof (p as Record<string, unknown>).text === "string")
+          buf.push((p as Record<string, unknown>).text as string);
       }
       return;
     }
@@ -166,8 +188,8 @@ function parseAdkResponse(data: unknown): string {
       const c = m.content as Record<string, unknown>;
       if (Array.isArray(c.parts)) {
         for (const p of c.parts) {
-          if (typeof p === "object" && p && typeof (p as Record<string,unknown>).text === "string")
-            buf.push((p as Record<string,unknown>).text as string);
+          if (typeof p === "object" && p && typeof (p as Record<string, unknown>).text === "string")
+            buf.push((p as Record<string, unknown>).text as string);
         }
         return;
       }
@@ -178,5 +200,23 @@ function parseAdkResponse(data: unknown): string {
   if (Array.isArray(data)) data.forEach(process);
   else process(data);
 
-  return buf.join("").trim() || "El agente no respondió.";
+  const raw = buf.join("").trim() || "El agente no respondió.";
+
+  // Try to parse structured JSON from output_schema
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed.text === "string") {
+      const refs: PdfRef[] = Array.isArray(parsed.refs)
+        ? (parsed.refs as unknown[]).filter(
+            (r): r is PdfRef =>
+              typeof r === "object" && r !== null &&
+              typeof (r as PdfRef).filename === "string" &&
+              typeof (r as PdfRef).page === "number"
+          )
+        : [];
+      return { text: parsed.text, refs };
+    }
+  } catch { /* not JSON — fall through */ }
+
+  return { text: raw, refs: [] };
 }

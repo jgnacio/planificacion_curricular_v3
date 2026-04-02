@@ -30,6 +30,31 @@ ENV/
 neo4j_data/
 neo4j_logs/
 
+# Databases (runtime data — never commit)
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+surreal_data/
+
+# Open Notebook runtime data (SQLite + uploaded PDFs)
+notebook_data/
+
+# ADK agent session files
+teacher_agent/.adk/
+
+# Parser intermediate / debug artifacts
+data/checkpoints/
+data/debug_*.txt
+data/folio_ciclo2_test.json
+data/curriculum_extracted.json
+data/curriculum_tramo_4.json
+
+# Claude session files
+claude_session
+
 # Environment variables
 .env
 .env.local

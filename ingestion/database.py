@@ -210,6 +210,81 @@ class Neo4jManager:
                 contenido=contenido, tramo=tramo
             )
 
+    def save_document_node(self, node, doc_id: str, fecha_upload: str) -> None:
+        """
+        Persiste un nodo DocumentoDocente en Neo4j.
+
+        Acepta CurriculumNode o DocumentNode del hierarchizer.
+        Usa MERGE sobre (doc_id, texto) para evitar duplicados.
+        """
+        if not self.driver:
+            return
+        with self.driver.session() as session:
+            session.execute_write(self._save_document_node_tx, node, doc_id, fecha_upload)
+
+    def _save_document_node_tx(self, tx, node, doc_id: str, fecha_upload: str) -> None:
+        from ingestion.hierarchizer import CurriculumNode
+
+        texto = node.texto or ""
+        if not texto.strip():
+            return
+
+        if isinstance(node, CurriculumNode):
+            titulo = node.eje or node.unidad or node.espacio or "Sin título"
+            props = {
+                "doc_id": doc_id,
+                "titulo_seccion": titulo,
+                "texto": texto,
+                "fecha_upload": fecha_upload,
+                "fuente": "curriculum_ondevice",
+                "ciclo": node.ciclo,
+                "espacio": node.espacio,
+                "unidad": node.unidad,
+                "eje": node.eje,
+                "tipo": node.tipo,
+            }
+        else:
+            props = {
+                "doc_id": doc_id,
+                "titulo_seccion": node.titulo_seccion,
+                "texto": texto,
+                "fecha_upload": fecha_upload,
+                "fuente": "docente",
+                "tipo": node.tipo,
+            }
+
+        tx.run(
+            """
+            MERGE (d:DocumentoDocente {doc_id: $doc_id, texto: $texto})
+            SET d += $props
+            """,
+            doc_id=doc_id,
+            texto=texto,
+            props=props,
+        )
+
+    def ensure_fulltext_index(self) -> None:
+        """
+        Crea o recrea el índice full-text que incluye Contenido y DocumentoDocente.
+        Llamar una vez al iniciar la app o después de cargar datos nuevos.
+        """
+        if not self.driver:
+            return
+        with self.driver.session() as session:
+            # Eliminar índice previo si existe (puede no tener DocumentoDocente)
+            try:
+                session.run("DROP INDEX contenido_ft IF EXISTS")
+            except Exception:
+                pass
+            session.run(
+                """
+                CREATE FULLTEXT INDEX contenido_ft IF NOT EXISTS
+                FOR (n:Contenido|DocumentoDocente)
+                ON EACH [n.descripcion, n.texto]
+                """
+            )
+            logging.info("Índice full-text 'contenido_ft' creado/actualizado.")
+
     def clear_database(self):
         if not self.driver:
             return
@@ -234,57 +309,37 @@ else:
 # DEFINICIÓN DE LAS CONSULTAS (TOOLS)
 # ==========================================
 
-def consultar_normativa_neo4j(tramo: str, unidad: str, tema: str) -> dict:
+def listar_contenidos(tramo: str, unidad: str) -> dict:
     """
-    Busca en la base de datos de grafos (Neo4j) el marco normativo oficial de ANEP
-    para un tramo, unidad curricular y tema/contenido específicos.
+    Devuelve TODOS los contenidos curriculares disponibles para un tramo y unidad,
+    agrupados por eje. Usá esta tool PRIMERO para mostrar las opciones disponibles
+    al docente antes de que elija un contenido específico.
+
+    Use this tool when the user specifies a tramo and unidad and you need to show
+    all available content options. Returns grouped content by eje.
 
     Args:
-        tramo (str): El tramo educativo (ej. "Tramo 1 | Niveles 3, 4 y 5 años" o "Tramo 1").
-        unidad (str): La unidad curricular o materia (ej. "Educación Física").
-        tema (str): El contenido específico o palabra clave del tema a enseñar.
+        tramo: El tramo educativo (ej. "Tramo 4")
+        unidad: La unidad curricular (ej. "Matemática", "Lengua Española")
 
     Returns:
-        dict: Diccionario con el 'status' ('success' o 'error') y el 'report' 
-              conteniendo los datos estructurados (CE, Criterio, MCN, Ejes).
+        dict con 'status' y 'ejes' (lista de ejes, cada uno con lista de 'contenidos')
     """
-    
-    # Consulta Cypher dinámica para atravesar el grafo y buscar coincidencias
-    print(f"\n[🔧 TOOL consultar_normativa_neo4j] -> Iniciando búsqueda de normativa...")
-    print(f"[🔍 PARÁMETROS] Tramo: '{tramo}' | Unidad: '{unidad}' | Tema: '{tema}'")
-    
+    print(f"\n[TOOL listar_contenidos] Tramo: '{tramo}' | Unidad: '{unidad}'")
+
     cypher_query = """
-    // Conectamos CE con Contenido y Criterio
-    MATCH (ce:CompetenciaEspecifica)-[:VINCULA_CON]->(cont:Contenido)-[:EVALUADO_POR]->(crit:CriterioLogro)
-    
-    // Relacionamos CE con el Tramo para filtrar
-    MATCH (ce)-[:BELONGS_TO*1..3]->(t:Tramo)
-    
-    // Filtramos usando el prefijo único de CE para la Unidad
-    // y los textos de Tramo y Tema
-    WHERE ce.id STARTS WITH toUpper(replace($unidad, ' ', '_')) + '_'
-      AND toLower(t.nombre) CONTAINS toLower($tramo)
-      AND toLower(cont.descripcion) CONTAINS toLower($tema)
-      
-    // Buscamos MCN y Ejes de forma opcional. Usamos '--' para ignorar el nombre exacto de la relación por seguridad.
-    OPTIONAL MATCH (ce)-[:CONTRIBUYE_A]->(mcn:CompetenciaMCN)
-    OPTIONAL MATCH (ce)-[:PERTENECE_A_EJE]->(eje:Eje)
-    
-    RETURN
-        ce.id AS ce_id,
-        ce.enunciado AS ce_enunciado,
-        ce.desarrollo AS ce_desarrollo,
-        cont.descripcion AS contenido,
-        crit.descripcion AS criterio,
-        cont.pagina AS pagina,
-        cont.pdf_fuente AS pdf_fuente,
-        collect(DISTINCT mcn.nombre) AS mcns,
-        collect(DISTINCT eje.nombre) AS ejes
-    LIMIT 3
+    MATCH (tr:Tramo)-[:TIENE_ESPACIO]->(:Espacio)-[:TIENE_UNIDAD]->(uc:UnidadCurricular)
+    WHERE toLower(tr.nombre) CONTAINS toLower($tramo)
+      AND toLower(uc.nombre) CONTAINS toLower($unidad)
+    MATCH (uc)-[:TIENE_EJE]->(eje:Eje)-[:TIENE_CONTENIDO]->(cont:Contenido)
+    RETURN eje.nombre AS eje,
+           collect({descripcion: cont.descripcion, tipo: cont.tipo, grados: cont.grados}) AS contenidos,
+           tr.nombre AS tramo,
+           uc.nombre AS unidad_nombre
+    ORDER BY eje.nombre
     """
-    
+
     try:
-        # Usando la clase Neo4jManager para consultar
         db_manager = Neo4jManager(uri=NEO4J_URI, user=NEO4J_USER, password=NEO4J_PASSWORD)
         if not db_manager.driver:
             return {
@@ -293,87 +348,213 @@ def consultar_normativa_neo4j(tramo: str, unidad: str, tema: str) -> dict:
             }
 
         with db_manager.driver.session() as session:
-            result = session.run(cypher_query, unidad=unidad, tramo=tramo, tema=tema)
+            result = session.run(cypher_query, tramo=tramo, unidad=unidad)
             records = list(result)
-            
+
         db_manager.close()
 
         if not records:
-            print(f"[⚠️ RESULTADO] No se encontró normativa en Neo4j para estos parámetros.")
             return {
-                "status": "error",
-                "error_message": f"No se encontró normativa en ANEP para Unidad: '{unidad}', Tramo: '{tramo}' y Tema: '{tema}'. Pídele al usuario que verifique los términos."
+                "status": "not_found",
+                "error_message": "No se encontró el tramo/unidad. Verificá los nombres."
             }
 
-        # Formatear el resultado para que el LLM lo entienda perfectamente
-        report_lines = ["DATOS NORMATIVOS OFICIALES ENCONTRADOS:\n"]
-        for idx, record in enumerate(records):
-            report_lines.append(f"--- RESULTADO {idx + 1} ---")
-            report_lines.append(f"COMPETENCIA ESPECÍFICA: [{record['ce_id']}] {record['ce_enunciado']}")
-            report_lines.append(f"DESARROLLO CE: {record['ce_desarrollo']}")
-            report_lines.append(f"CONTENIDO: {record['contenido']}")
-            report_lines.append(f"CRITERIO DE LOGRO: {record['criterio']}")
-            if record['mcns']:
-                report_lines.append(f"MCN (COMPETENCIAS GENERALES): {', '.join(record['mcns'])}")
-            if record['ejes']:
-                report_lines.append(f"EJES TEMÁTICOS: {', '.join(record['ejes'])}")
-            pagina = record.get('pagina')
-            pdf_fuente = record.get('pdf_fuente')
-            if pagina and pdf_fuente:
-                report_lines.append(f"FUENTE_PDF: {pdf_fuente} | PAGINA: {pagina}")
-                report_lines.append(f"BADGE_REF: [[REF:{pdf_fuente}:{pagina}]]")
-            report_lines.append("")
+        ejes = []
+        total_contenidos = 0
+        tramo_nombre = records[0]["tramo"]
+        unidad_nombre = records[0]["unidad_nombre"]
 
-        print(f"[✅ RESULTADO] Se encontraron {len(records)} registros normativos.")
-        print("-" * 40)
+        for record in records:
+            contenidos = record["contenidos"]
+            total_contenidos += len(contenidos)
+            ejes.append({
+                "eje": record["eje"],
+                "contenidos": [
+                    {
+                        "descripcion": c["descripcion"],
+                        "tipo": c["tipo"],
+                        "grados": c["grados"],
+                    }
+                    for c in contenidos
+                ]
+            })
+
+        print(f"[OK] {total_contenidos} contenidos encontrados en {len(ejes)} ejes.")
         return {
             "status": "success",
-            "report": "\\n".join(report_lines)
+            "tramo": tramo_nombre,
+            "unidad": unidad_nombre,
+            "total_contenidos": total_contenidos,
+            "ejes": ejes,
         }
 
     except Exception as e:
-        print(f"[❌ ERROR] Excepción al consultar Neo4j: {str(e)}")
+        print(f"[ERROR] Excepcion al consultar Neo4j: {str(e)}")
         return {
             "status": "error",
             "error_message": f"Error interno al conectar con la base de datos Neo4j: {str(e)}"
         }
 
 
-def buscar_contenido_por_texto(texto: str, tramo: str = "") -> dict:
+def consultar_detalle_contenido(tramo: str, unidad: str, contenido: str) -> dict:
+    """
+    Obtiene el detalle normativo completo para UN contenido específico: Competencia
+    Específica, Criterios de Logro vinculados y Competencias Generales (MCN).
+    Llamá esta tool DESPUÉS de que el docente elige un contenido de la lista.
+
+    Use this tool to get the full curriculum detail for a specific content item
+    that the teacher has already selected.
+
+    Args:
+        tramo: El tramo educativo (ej. "Tramo 4")
+        unidad: La unidad curricular (ej. "Matemática")
+        contenido: Descripción del contenido elegido (búsqueda por CONTAINS)
+
+    Returns:
+        dict con 'status' y 'detalle' con CE, criterios de logro y MCNs
+    """
+    print(f"\n[TOOL consultar_detalle_contenido] Tramo: '{tramo}' | Unidad: '{unidad}' | Contenido: '{contenido}'")
+
+    cypher_query = """
+    MATCH (tr:Tramo)-[:TIENE_ESPACIO]->(:Espacio)-[:TIENE_UNIDAD]->(uc:UnidadCurricular)
+    WHERE toLower(tr.nombre) CONTAINS toLower($tramo)
+      AND toLower(uc.nombre) CONTAINS toLower($unidad)
+    MATCH (uc)-[:TIENE_EJE]->(eje:Eje)-[:TIENE_CONTENIDO]->(cont:Contenido)
+    WHERE toLower(cont.descripcion) CONTAINS toLower($contenido)
+    OPTIONAL MATCH (cont)-[:TRABAJA_CE]->(ce:CompetenciaEspecifica)
+    OPTIONAL MATCH (ce)<-[:EVALUADO_POR_CE]-(crit:CriterioDeLogro)
+    OPTIONAL MATCH (ce)-[:CONTRIBUYE_A]->(mcn:CompetenciaGeneral)
+    RETURN
+      cont.descripcion     AS contenido,
+      cont.tipo            AS tipo,
+      cont.grados          AS grados,
+      eje.nombre           AS eje,
+      tr.nombre            AS tramo,
+      uc.nombre            AS unidad,
+      ce.codigo            AS ce_codigo,
+      ce.descripcion       AS ce_descripcion,
+      collect(DISTINCT crit.descripcion) AS criterios,
+      collect(DISTINCT mcn.nombre)       AS mcns
+    ORDER BY ce.codigo
+    LIMIT 10
+    """
+
+    try:
+        db_manager = Neo4jManager(uri=NEO4J_URI, user=NEO4J_USER, password=NEO4J_PASSWORD)
+        if not db_manager.driver:
+            return {
+                "status": "error",
+                "error_message": "Error interno: no se pudo conectar con la base de datos Neo4j."
+            }
+
+        with db_manager.driver.session() as session:
+            result = session.run(cypher_query, tramo=tramo, unidad=unidad, contenido=contenido)
+            records = list(result)
+
+        db_manager.close()
+
+        if not records:
+            return {
+                "status": "not_found",
+                "error_message": "No se encontró el contenido. Intentá con palabras clave del nombre exacto."
+            }
+
+        first = records[0]
+        print(f"[OK] Detalle encontrado para '{first['contenido']}' — {len(records)} CE(s).")
+        return {
+            "status": "success",
+            "contenido": first["contenido"],
+            "tipo": first["tipo"],
+            "grados": first["grados"],
+            "eje": first["eje"],
+            "tramo": first["tramo"],
+            "unidad": first["unidad"],
+            "competencias": [
+                {
+                    "ce_codigo": r["ce_codigo"],
+                    "ce_descripcion": r["ce_descripcion"],
+                    "criterios_de_logro": [c for c in r["criterios"] if c],
+                    "mcns": [m for m in r["mcns"] if m],
+                }
+                for r in records if r["ce_codigo"]
+            ],
+        }
+
+    except Exception as e:
+        print(f"[ERROR] Excepcion al consultar Neo4j: {str(e)}")
+        return {
+            "status": "error",
+            "error_message": f"Error interno al conectar con la base de datos Neo4j: {str(e)}"
+        }
+
+
+def buscar_contenido_por_texto(texto: str, tramo: str) -> dict:
     """
     Busca contenidos curriculares en Neo4j usando búsqueda full-text semántica.
     Ideal para validar una actividad de planificación existente: dado el texto de
     una actividad (contenido + meta + plan), devuelve los nodos del programa oficial
     que mejor coinciden (Competencia, Contenido, Criterio de Logro, Tramo).
 
+    Use this tool when the user asks to validate an existing activity or wants to
+    find curriculum content by free text description.
+
     Args:
-        texto (str): Texto libre de la actividad a buscar (ej: "La práctica de escritura: selección del tema").
-        tramo (str): Tramo educativo opcional para filtrar (ej: "Tramo 3", "Grados 3"). Si está vacío, busca en todos.
+        texto (str): Texto libre de la actividad a buscar (ej: "escritura selección del tema").
+        tramo (str): Tramo educativo para filtrar (ej: "Tramo 3"). Usar "" para buscar en todos.
 
     Returns:
         dict: Diccionario con 'status' y 'resultados' (lista de matches con CE, contenido, criterio, tramo).
     """
-    print(f"\n[🔧 TOOL buscar_contenido_por_texto] Texto: '{texto[:60]}...' | Tramo: '{tramo}'")
+    print(f"\n[TOOL buscar_contenido_por_texto] Texto: '{texto[:60]}' | Tramo: '{tramo}'")
 
-    cypher_query = """
+    cypher_fulltext = """
     CALL db.index.fulltext.queryNodes("contenido_ft", $texto) YIELD node AS cont, score
-    MATCH (ce:CompetenciaEspecifica)-[:VINCULA_CON]->(cont)-[:EVALUADO_POR]->(crit:CriterioLogro)
-    MATCH (ce)-[:BELONGS_TO*1..3]->(t:Tramo)
-    WHERE $tramo = "" OR toLower(t.nombre) CONTAINS toLower($tramo)
-    MATCH (ce)-[:BELONGS_TO*1..3]->(u:Unidad)
-    OPTIONAL MATCH (u)-[:BELONGS_TO]->(e:Espacio)
+    WHERE cont:Contenido
+    MATCH (eje:Eje)-[:TIENE_CONTENIDO]->(cont)
+    MATCH (uc:UnidadCurricular)-[:TIENE_EJE]->(eje)
+    MATCH (tr:Tramo)-[:TIENE_ESPACIO]->(:Espacio)-[:TIENE_UNIDAD]->(uc)
+    WHERE $tramo = "" OR toLower(tr.nombre) CONTAINS toLower($tramo)
+    OPTIONAL MATCH (uc)-[:DEFINE_CE]->(ce:CompetenciaEspecifica)
+    OPTIONAL MATCH (cont)-[:TRABAJA_CE]->(ce2:CompetenciaEspecifica)
+    WITH cont, score, eje, uc, tr,
+         coalesce(ce2, ce) AS ce_match
+    OPTIONAL MATCH (ce_match)-[:CONTRIBUYE_A]->(cg:CompetenciaGeneral)
+    OPTIONAL MATCH (uc)-[:SE_EVALUA_CON]->(crit:CriterioDeLogro)
     RETURN
-        ce.id          AS ce_id,
-        ce.enunciado   AS ce_enunciado,
-        cont.descripcion AS contenido,
-        crit.descripcion AS criterio,
-        t.nombre       AS tramo,
-        u.nombre       AS unidad,
-        e.nombre       AS espacio,
-        cont.pagina    AS pagina,
-        cont.pdf_fuente AS pdf_fuente,
-        score
+      ce_match.codigo      AS ce_id,
+      ce_match.descripcion AS ce_enunciado,
+      cont.descripcion     AS contenido,
+      crit.descripcion     AS criterio,
+      tr.nombre            AS tramo,
+      uc.nombre            AS unidad,
+      uc.espacio           AS espacio,
+      cont.pagina          AS pagina,
+      cont.pdf_fuente      AS pdf_fuente,
+      score
     ORDER BY score DESC
+    LIMIT 5
+    """
+
+    cypher_fallback = """
+    MATCH (tr:Tramo)-[:TIENE_ESPACIO]->(:Espacio)-[:TIENE_UNIDAD]->(uc:UnidadCurricular)
+          -[:TIENE_EJE]->(:Eje)-[:TIENE_CONTENIDO]->(cont:Contenido)
+    WHERE toLower(cont.descripcion) CONTAINS toLower($texto)
+      AND ($tramo = "" OR toLower(tr.nombre) CONTAINS toLower($tramo))
+    OPTIONAL MATCH (cont)-[:TRABAJA_CE]->(ce:CompetenciaEspecifica)
+    OPTIONAL MATCH (ce)-[:CONTRIBUYE_A]->(cg:CompetenciaGeneral)
+    OPTIONAL MATCH (uc)-[:SE_EVALUA_CON]->(crit:CriterioDeLogro)
+    RETURN
+      ce.codigo          AS ce_id,
+      ce.descripcion     AS ce_enunciado,
+      cont.descripcion   AS contenido,
+      crit.descripcion   AS criterio,
+      tr.nombre          AS tramo,
+      uc.nombre          AS unidad,
+      uc.espacio         AS espacio,
+      cont.pagina        AS pagina,
+      cont.pdf_fuente    AS pdf_fuente,
+      1.0                AS score
+    ORDER BY cont.descripcion
     LIMIT 5
     """
 
@@ -383,12 +564,20 @@ def buscar_contenido_por_texto(texto: str, tramo: str = "") -> dict:
             return {"status": "error", "error_message": "No se pudo conectar con Neo4j."}
 
         with db_manager.driver.session() as session:
-            result = session.run(cypher_query, texto=texto, tramo=tramo)
-            records = list(result)
+            try:
+                result = session.run(cypher_fulltext, texto=texto, tramo=tramo)
+                records = list(result)
+                used_fulltext = True
+            except Exception as ft_err:
+                # Fulltext index missing or query error — use CONTAINS fallback
+                print(f"[WARN] Fulltext query failed ({ft_err}), usando CONTAINS fallback.")
+                result = session.run(cypher_fallback, texto=texto, tramo=tramo)
+                records = list(result)
+                used_fulltext = False
+
         db_manager.close()
 
         if not records:
-            print("[⚠️ RESULTADO] Sin matches en el índice full-text.")
             return {
                 "status": "not_found",
                 "error_message": f"No se encontraron contenidos que coincidan con: '{texto}'. Intenta reformular con términos del programa oficial."
@@ -409,9 +598,9 @@ def buscar_contenido_por_texto(texto: str, tramo: str = "") -> dict:
                 "pdf_fuente": r["pdf_fuente"],
             })
 
-        print(f"[✅ RESULTADO] {len(resultados)} matches encontrados.")
+        print(f"[OK] {len(resultados)} matches encontrados (fulltext={used_fulltext}).")
         return {"status": "success", "resultados": resultados}
 
     except Exception as e:
-        print(f"[❌ ERROR] {str(e)}")
+        print(f"[ERROR] {str(e)}")
         return {"status": "error", "error_message": str(e)}

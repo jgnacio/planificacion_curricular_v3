@@ -4,74 +4,32 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from dotenv import load_dotenv
-from google.adk.agents.llm_agent import LlmAgent
-from google.adk.apps.app import App
-from google.adk.models.lite_llm import LiteLlm
+from google.adk.agents import Agent
+from google.genai import types as genai_types
+from pydantic import BaseModel, Field
+from typing import List
 
-from ingestion.database import buscar_contenido_por_texto, consultar_normativa_neo4j
 from api.database import SessionLocal
 from api.models.planificacion import Planificacion
 from api.models.alumno import Alumno
 
-import hashlib
-import functools
 import httpx
+import json
+import unicodedata
 from bs4 import BeautifulSoup
 from duckduckgo_search import DDGS
 
 load_dotenv()
 
-# ==========================================
-# CALL-LIMIT WRAPPER — evita loops del LLM
-# ==========================================
-# Modelos pequeños varían el texto ligeramente en cada llamada para evadir
-# el dedup por hash. Este wrapper limita el total de llamadas permitidas
-# por nombre de herramienta en la sesión actual del proceso.
-# Después de MAX_CALLS, devuelve el último resultado cacheado + aviso duro.
+OPEN_NOTEBOOK_URL = "http://localhost:5055"
+OPEN_NOTEBOOK_NOTEBOOK_ID = "notebook:plf3f24qx6nui9zmn3vl"  # Facilitador Docente
+OPEN_NOTEBOOK_MODEL = "model:fi2x3hf9fvjdxl25ljwt"  # gemini-2.5-flash
 
-_MAX_CALLS = 2  # máximo de veces que se puede llamar la misma tool
-_call_counts: dict[str, int] = {}
-_last_results: dict[str, dict] = {}
-
-def dedup_tool(fn):
-    """Limita a _MAX_CALLS llamadas por nombre de herramienta."""
-    @functools.wraps(fn)
-    def wrapper(**kwargs):
-        name = fn.__name__
-        count = _call_counts.get(name, 0)
-        if count >= _MAX_CALLS:
-            last = _last_results.get(name, {})
-            return {
-                **last,
-                "_stop": (
-                    f"[STOP] Ya llamaste '{name}' {count} veces. "
-                    "No podés llamarla más. Usá los resultados que ya tenés "
-                    "y generá tu respuesta final AHORA."
-                ),
-            }
-        result = fn(**kwargs)
-        _call_counts[name] = count + 1
-        _last_results[name] = result
-        return result
-    return wrapper
-
-import litellm
-litellm.add_function_to_prompt = False
-
-# ==========================================
-# MODELO — dev: LM Studio local | prod: Groq
-# ==========================================
-_env = os.getenv("APP_ENV", "dev").lower()
-
-if _env == "dev":
-    _lmstudio_model = os.getenv("LMSTUDIO_MAIN_MODEL_ID", "local-model")
-    os.environ["OPENAI_API_BASE"] = os.getenv("LMSTUDIO_API_BASE", "http://localhost:1234/v1")
-    os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY", "lm-studio")
-    model = LiteLlm(model=f"openai/{_lmstudio_model}")
-else:
-    model = LiteLlm(
-        model="groq/moonshotai/kimi-k2-instruct-0905",
-        api_key=os.getenv("GROQ_API_KEY"),
+# Validate GOOGLE_API_KEY at import time — fail fast, not at first request
+if not os.getenv("GOOGLE_API_KEY"):
+    raise ValueError(
+        "GOOGLE_API_KEY no está configurada en el entorno. "
+        "Agregala al archivo .env antes de iniciar la aplicación."
     )
 
 # ==========================================
@@ -330,187 +288,384 @@ def eliminar_planificacion(planificacion_id: int) -> dict:
         db.close()
 
 
+def consultar_curriculo_oficial(pregunta: str) -> dict:
+    """
+    Consulta los PDFs oficiales del currículo EBI/ANEP (1er y 2do Ciclo) usando Open Notebook.
+    Devuelve orientaciones pedagógicas, metodologías sugeridas y contexto del programa
+    que complementan los datos estructurados de Neo4j.
+
+    Usá esta tool DESPUÉS de obtener el contenido y CE de Neo4j, para enriquecer
+    la planificación con las orientaciones pedagógicas reales del programa oficial.
+    Ideal para preguntas como:
+    - "¿Qué metodologías sugiere el programa para enseñar X?"
+    - "¿Cómo se aborda Y en el perfil de Tramo 4?"
+    - "¿Qué dice el currículo sobre la evaluación de Z?"
+
+    Args:
+        pregunta: Pregunta pedagógica sobre el currículo (en español, clara y específica)
+
+    Returns:
+        dict con 'status' ('success' o 'error') y 'respuesta' con el texto del currículo
+    """
+    print(f"\n[TOOL consultar_curriculo_oficial] Pregunta: '{pregunta[:80]}'")
+    try:
+        response = httpx.post(
+            f"{OPEN_NOTEBOOK_URL}/api/search/ask/simple",
+            json={
+                "question": pregunta,
+                "notebook_id": OPEN_NOTEBOOK_NOTEBOOK_ID,
+                "strategy_model": OPEN_NOTEBOOK_MODEL,
+                "answer_model": OPEN_NOTEBOOK_MODEL,
+                "final_answer_model": OPEN_NOTEBOOK_MODEL,
+            },
+            timeout=60.0,
+        )
+        if response.status_code == 200:
+            data = response.json()
+            answer = (
+                data.get("answer")
+                or data.get("final_answer")
+                or data.get("response")
+                or str(data)
+            )
+            print(f"[OK] Respuesta de Open Notebook obtenida ({len(str(answer))} chars)")
+            return {"status": "success", "respuesta": answer}
+        else:
+            detail = response.json().get("detail", response.text)
+            print(f"[WARN] Open Notebook respondió {response.status_code}: {detail}")
+            return {"status": "error", "error_message": f"Open Notebook error: {detail}"}
+    except Exception as e:
+        print(f"[WARN] Open Notebook no accesible: {e}")
+        return {"status": "error", "error_message": f"Open Notebook no accesible: {str(e)}"}
+
+
+# ==========================================
+# CURRICULUM JSON TOOL
+# ==========================================
+
+_CURRICULUM_JSON_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "data",
+    "curriculum_structure.json",
+)
+_curriculum_data: dict | None = None
+
+
+def _load_curriculum() -> dict:
+    global _curriculum_data
+    if _curriculum_data is None:
+        with open(_CURRICULUM_JSON_PATH, encoding="utf-8") as f:
+            _curriculum_data = json.load(f)
+    return _curriculum_data
+
+
+def _slugify(text: str) -> str:
+    """Normalize text to slug for fuzzy matching."""
+    text = unicodedata.normalize("NFD", text.lower())
+    text = "".join(c for c in text if unicodedata.category(c) != "Mn")
+    return text.replace(" ", "_").replace("-", "_")
+
+
+def _find_espacio(espacios: dict, nombre_raw: str) -> tuple[str, dict] | tuple[None, None]:
+    """Find espacio by exact or fuzzy name match."""
+    target = _slugify(nombre_raw)
+    # Try exact key
+    if target in espacios:
+        return target, espacios[target]
+    # Try substring match on espacio nombre or key
+    for key, esp in espacios.items():
+        if target in _slugify(esp.get("nombre", "")) or _slugify(esp.get("nombre", "")) in target:
+            return key, esp
+        # Also search within materias if espacio has them
+        for mat_key, mat in esp.get("materias", {}).items():
+            mat_nombre = _slugify(mat.get("nombre", ""))
+            if target in mat_nombre or mat_nombre in target:
+                # Return espacio wrapping single materia
+                return key, {"nombre": esp["nombre"], "_matched_materia": mat_key, **esp}
+    return None, None
+
+
+def _find_materia(espacio: dict, nombre_raw: str) -> dict | None:
+    """Find materia inside espacio, or return espacio itself if no materias."""
+    materias = espacio.get("materias", {})
+    if not materias:
+        return espacio  # espacio IS the materia
+
+    target = _slugify(nombre_raw)
+    for mat_key, mat in materias.items():
+        mat_nombre = _slugify(mat.get("nombre", ""))
+        if target in mat_nombre or mat_nombre in target or mat_key == target:
+            return mat
+
+    # If no match, return first materia or None
+    matched_key = espacio.get("_matched_materia")
+    if matched_key and matched_key in materias:
+        return materias[matched_key]
+    return None
+
+
+def consultar_curriculo_estructurado(espacio: str, tramo: int, grado: str) -> dict:
+    """
+    Consulta el currículo oficial EBI (estructura completa: CEs, contenidos y criterios de logro)
+    desde el JSON extraído del programa ANEP. Usa esta tool PRIMERO para obtener
+    los datos estructurados antes de generar una planificación.
+
+    Usá esta tool cuando necesitás:
+    - Las Competencias Específicas (CEs) de una materia y tramo
+    - Los contenidos organizados por eje para un grado específico
+    - Los criterios de logro para evaluar un grado
+    - Confirmar qué CE corresponde a un contenido dado
+
+    Args:
+        espacio: Nombre del espacio o materia, e.g. "Matemática", "Lengua", "Inglés",
+                 "Espacio Científico-Matemático", "Espacio Social-Humanístico"
+        tramo: Número de tramo — 3 (para 3.o y 4.o grado) o 4 (para 5.o y 6.o grado)
+        grado: Grado específico, e.g. "3", "4", "5", "6" (o "todos" para obtener todo el tramo)
+
+    Returns:
+        dict con 'status', 'espacio', 'tramo', 'competencias_especificas',
+        'contenidos' (para el grado pedido) y 'criterios' (para el grado pedido)
+    """
+    print(f"\n[TOOL consultar_curriculo_estructurado] espacio={espacio!r} tramo={tramo} grado={grado!r}")
+    try:
+        data = _load_curriculum()
+        tramo_key = f"tramo_{tramo}"
+        if tramo_key not in data.get("tramos", {}):
+            return {"status": "error", "error_message": f"Tramo {tramo} no existe. Usá 3 o 4."}
+
+        espacios = data["tramos"][tramo_key]["espacios"]
+        esp_key, esp_data = _find_espacio(espacios, espacio)
+        if esp_data is None:
+            available = [e["nombre"] for e in espacios.values()]
+            return {
+                "status": "error",
+                "error_message": f"Espacio '{espacio}' no encontrado en Tramo {tramo}. Disponibles: {available}",
+            }
+
+        materia = _find_materia(esp_data, espacio)
+        if materia is None:
+            # Return espacio-level data
+            materia = esp_data
+
+        # Build grade keys to return
+        grade_suffix_map = {
+            "3": "3er_grado", "4": "4to_grado",
+            "5": "5to_grado", "6": "6to_grado",
+        }
+        grade_key = grade_suffix_map.get(str(grado).strip(), None)
+
+        # CEs (same for whole tramo)
+        ces = materia.get("competencias_especificas", [])
+
+        # Contenidos
+        all_contenidos = materia.get("contenidos", {})
+        if grade_key and grade_key in all_contenidos:
+            contenidos_result = {grade_key: all_contenidos[grade_key]}
+        elif grado and str(grado).lower() != "todos" and grade_key:
+            contenidos_result = {}  # grade not found
+        else:
+            contenidos_result = all_contenidos  # all grades
+
+        # Criterios
+        all_criterios = materia.get("criterios", {})
+        if grade_key and grade_key in all_criterios:
+            criterios_result = {grade_key: all_criterios[grade_key]}
+        elif grado and str(grado).lower() != "todos" and grade_key:
+            criterios_result = {}
+        else:
+            criterios_result = all_criterios
+
+        nombre_materia = materia.get("nombre", esp_data.get("nombre", espacio))
+        print(f"[OK] {nombre_materia} — {len(ces)} CEs, {len(contenidos_result)} bloques de contenidos")
+        return {
+            "status": "success",
+            "espacio": nombre_materia,
+            "tramo": tramo,
+            "grado_solicitado": grado,
+            "competencias_especificas": ces,
+            "contenidos": contenidos_result,
+            "criterios": criterios_result,
+        }
+    except FileNotFoundError:
+        return {
+            "status": "error",
+            "error_message": "Archivo curriculum_structure.json no encontrado. Ejecutá scripts/extract_curriculum_structure.py primero.",
+        }
+    except Exception as e:
+        return {"status": "error", "error_message": str(e)}
+
+
+# ==========================================
+# RESPONSE SCHEMA
+# ==========================================
+
+class PdfRef(BaseModel):
+    filename: str = Field(description="Nombre exacto del archivo PDF, e.g. 'tramo4_lengua.pdf'")
+    page: int = Field(description="Número de página en el PDF")
+    label: str = Field(description="Etiqueta legible para el badge, e.g. 'Lengua Española — p.23'")
+
+
+class FacilitadorResponse(BaseModel):
+    text: str = Field(
+        description=(
+            "Respuesta en español, cálida y profesional. "
+            "Puede incluir tokens [[Opción]] para selección única y ((Opción)) para selección múltiple. "
+            "NO incluyas tokens [[REF:...]] aquí — las referencias PDF van en el campo refs."
+        )
+    )
+    refs: List[PdfRef] = Field(
+        default=[],
+        description=(
+            "Referencias a páginas de PDFs oficiales. "
+            "Extraé los valores de BADGE_REF que devuelvan las tools. "
+            "Formato del BADGE_REF: 'nombre_archivo.pdf:numero_pagina'. "
+            "Cada ref se muestra como badge clickeable en la app para abrir el PDF en esa página."
+        ),
+    )
+
+
 # ==========================================
 # PROMPT
 # ==========================================
 
 AGENT_PROMPT = """
-Sos el "Facilitador Docente EBI", un consultor curricular experto en el programa de Educación Básica
-Integrada (EBI) de la ANEP (Uruguay). Tu rol es ser la fuente de verdad: VOS traés la información
-a la docente, no al revés. La docente no tiene que saber qué contenidos existen — eso lo sabés vos.
+## Identity
 
-═══════════════════════════════════════════════
-PRINCIPIO FUNDAMENTAL — CONSULTOR PROACTIVO
-═══════════════════════════════════════════════
-NUNCA le pedís a la docente que te diga el tema o el contenido a planificar.
-Con cualquier dato que la docente mencione (espacio, tramo, o ambos), consultás la base de datos
-INMEDIATAMENTE y le presentás opciones reales. Vos sabés qué hay en el programa; ella elige.
+Sos el Facilitador Docente EBI — consultor curricular del programa EBI/ANEP Uruguay.
+Tono profesional y cálido. Nunca mencionés estrés, carga laboral ni bienestar docente.
 
-PROHIBIDO:
-- Pedir el "tema" antes de consultar la base de datos.
-- Inventar temas, contenidos, competencias o criterios de cualquier tipo.
-- Mostrar opciones que no provengan de una herramienta consultada en este mismo turno.
+## Mission
 
-OBLIGATORIO:
-- Llamar una herramienta de consulta ANTES de presentar cualquier opción curricular.
-- Mostrar solo lo que devuelve la base de datos.
-- Si no hay resultados, decirlo claramente y ofrecer buscar con otros parámetros.
+Traés vos la información curricular; la docente elige. Consultás la base de datos ANTES de hacer cualquier pregunta. La docente no necesita saber qué contenidos existen — eso lo sabés vos.
 
-═══════════════════════════════════════════════
-REGLA CRÍTICA — BADGES DE REFERENCIA PDF
-═══════════════════════════════════════════════
-CADA VEZ que presentes información proveniente de la base de datos, DEBÉS incluir el badge
-de referencia en el formato exacto: [[REF:nombre_del_archivo.pdf:numero_de_pagina]]
+## Methodology
 
-El nombre del archivo y el número de página están en el campo BADGE_REF que devuelven las tools.
-Copiá ese token EXACTAMENTE como aparece en el resultado de la tool, sin modificarlo.
+### Tablas de referencia
 
-PROHIBIDO: omitir el badge. PROHIBIDO: inventar nombres de PDF o números de página.
-Si la tool no devuelve BADGE_REF, simplemente no incluyas el token.
+Grado → Tramo: 3° y 4° = Tramo 3 | 5° y 6° = Tramo 4.
+Neo4j tiene solo 2do ciclo (Tramo 3 y Tramo 4). Si mencionan 1° o 2°, informá que aún no están disponibles.
 
-El badge se muestra en la app como un botón clickeable que abre el PDF en la página exacta.
-Es la única forma que tiene la docente de verificar la fuente oficial — es CRÍTICO incluirlo.
+Palabras clave → Espacio / Unidad:
+- escritura, lectura, texto, lengua, oral, argumentativo, narrativo → Espacio de Comunicación / Lengua Española
+- número, matemática, geometría, fracción, álgebra, medida → Espacio Científico-Matemático / Matemática
+- historia, geografía, sociedad, ciudadanía, derechos → Espacio Ciencias Sociales y Humanidades / Ciencias Sociales
+- ciencia, biología, física, química, naturaleza, ecosistema → Espacio Científico-Matemático / Ciencias Naturales
+- arte, música, danza, teatro, plástica → Espacio Creativo-Artístico / Educación Artística
+- tecnología, informática, programación → Espacio Técnico-Tecnológico / Tecnología
+- educación física, deporte, cuerpo, movimiento → Espacio de Desarrollo Personal y Conciencia Corporal / Ed. Física
 
-═══════════════════════════════════════════════
-HERRAMIENTAS DISPONIBLES
-═══════════════════════════════════════════════
-Consulta curricular (Neo4j — normativa oficial ANEP):
-- `buscar_contenido_por_texto(texto, tramo)`: búsqueda semántica. Usála para explorar contenidos
-  disponibles cuando la docente menciona un tema o área.
-- `consultar_normativa_neo4j(tramo, unidad, tema)`: búsqueda estructurada. Si `tema` es vacío (""),
-  devuelve todos los contenidos de esa unidad en ese tramo. Usá esta para descubrir opciones.
+### Flujo A — Nueva planificación
 
-Búsqueda web:
-- `buscar_en_internet(consulta)`: busca en DuckDuckGo, recupera al menos 5 fuentes reales,
-  extrae su contenido y lo devuelve listo para usar. Usala para buscar ideas de actividades,
-  recursos didácticos, secuencias pedagógicas o ejemplos de clase relacionados con el contenido
-  que ya encontraste en la base de datos curricular.
+**PASO 1 — Inferir y consultar datos estructurados (UNA sola llamada)**
+Analizá el mensaje, inferí espacio/tramo/grado usando las tablas de arriba.
+Llamá `consultar_curriculo_estructurado(espacio, tramo, grado)` EXACTAMENTE UNA VEZ.
+Esta tool devuelve los CEs, contenidos y criterios de logro directos del programa oficial.
+NO volvás a llamar la tool aunque la respuesta sea incompleta.
 
-Gestión institucional (SQLite):
-- `listar_alumnos(nivel, grado)`: lista de alumnos con sus datos y notas.
-- `listar_planificaciones()`: planificaciones guardadas.
-- `crear_planificacion(...)`: guardar una nueva planificación.
-- `actualizar_planificacion(id, ...)`: modificar una existente.
-- `eliminar_planificacion(id)`: eliminar (siempre pedir confirmación antes).
+**PASO 2 — Confirmación (exactamente una vez)**
+Con los datos devueltos, elegí el CE y el contenido más relevante para el tema del docente.
+Mostrá el resumen y terminá con los tokens:
 
-═══════════════════════════════════════════════
-FLUJO — GENERAR PLANIFICACIÓN DESDE CERO
-═══════════════════════════════════════════════
-Se activa cuando la docente quiere planificar. Seguí SIEMPRE este flujo:
-
-PASO 1 — Con el espacio/unidad mencionado, descubrí el contenido disponible:
-  a) Si ya tenés tramo + unidad: llamá `consultar_normativa_neo4j(tramo, unidad, "")` de inmediato.
-  b) Si solo tenés unidad (falta el tramo): llamá `buscar_contenido_por_texto(unidad, "")` para ver
-     qué tramos tienen contenido para esa unidad. Luego preguntá el tramo mostrando solo los tramos
-     que REALMENTE aparecen en los resultados como opciones [[interactivas]].
-  c) Si solo tenés tramo: preguntá el espacio curricular con [[opciones]] de los espacios del programa.
-
-PASO 2 — Presentá los contenidos reales de la base de datos:
-  Después de consultar, mostrá los contenidos encontrados como opciones [[interactivas]].
-  Cada opción debe ser el texto real del contenido de la base de datos.
-  Ejemplo: "Encontré estos contenidos en la base de datos para Tecnología Tramo 3:
-  [[Uso de herramientas digitales para comunicar ideas]] [[Programación básica con bloques]] ..."
-
-PASO 3 — Cuando la docente elige un contenido:
-  a) Llamá `listar_alumnos` filtrando por el tramo para conocer el grupo.
-  b) Llamá `consultar_normativa_neo4j(tramo, unidad, contenido_elegido)` para obtener la CE,
-     criterio de logro, MCN y ejes completos.
-  c) Generá la planificación completa:
-
-  **Título:** [creativo y motivador]
-  **Grupo:** [resumen real de alumnos según la base de datos]
-  **Justificación:** cómo desarrolla la CE y aporta al MCN.
-  **Inicio (10-15 min):** actividad disparadora adaptada al grupo real.
-  **Desarrollo (25-45 min):** actividad central para evidenciar el Criterio de Logro.
-  **Cierre (10-15 min):** metacognición o evaluación formativa.
-  **Recursos:** materiales realistas para un aula uruguaya.
-
-  📎 **Referencias normativas:**
-  - CE: [ce_id] — [enunciado]
-  - Contenido: [descripción exacta de la base de datos]
-  - Criterio de Logro: [criterio]
-  - Tramo: [tramo] | Unidad: [unidad] | Espacio: [espacio]
-  - Fuente oficial: [[REF:nombre_exacto_del_pdf.pdf:numero_de_pagina]]
-
-  🌐 **Recursos web consultados:**
-  - [Título del recurso 1](url_exacta_1) — [una línea de qué aportó]
-  - [Título del recurso 2](url_exacta_2) — [una línea de qué aportó]
-  - (una línea por cada fuente recuperada por buscar_en_internet)
-  Nunca inventes URLs. Solo incluí este bloque si llamaste a `buscar_en_internet`.
-
-  d) Opcionalmente, llamá `buscar_en_internet` para enriquecer las ideas de actividades
-     con recursos reales de la web, relacionados con el contenido y el tramo.
-     Incluí las fuentes con sus links en la respuesta.
-
-  e) Al terminar preguntá si desea guardar. Si confirma, llamá `crear_planificacion`.
-
-═══════════════════════════════════════════════
-FLUJO — VALIDAR ACTIVIDAD EXISTENTE
-═══════════════════════════════════════════════
-Cuando la docente pega el texto de una actividad o descripción:
-1. Extraé las palabras clave pedagógicas.
-2. Llamá `buscar_contenido_por_texto` con esas palabras clave.
-3. Si score < 3.0, reformulá con sinónimos y volvé a buscar.
-4. Presentá el resultado:
+Esto es lo que encontré para tu planificación:
 
 📚 **Espacio:** [espacio]
-📖 **Unidad Curricular:** [unidad]
-🎯 **Competencia Específica:** [ce_id] — [enunciado]
+📖 **Unidad:** [unidad]
+📅 **Tramo:** [tramo] | **Grado:** [grado]
+📝 **Contenido:** [contenido del programa oficial]
+🎯 **CE:** [código y enunciado de la competencia específica]
+✅ **Criterio de Logro:** [criterio]
+
+¿Arrancamos con esto?
+[[Sí, generá la planificación]] [[Quiero cambiar algo]]
+
+**PASO 3 — Generar (solo al recibir [[Sí, generá la planificación]])**
+FIRST llamá `listar_alumnos()` para conocer el grupo real.
+THEN llamá `consultar_curriculo_oficial("¿Qué orientaciones pedagógicas, metodologías y secuencia didáctica sugiere el programa EBI para enseñar [contenido] en [tramo]? Incluí ejemplos de actividades si los hay.")` para enriquecer la planificación con sugerencias metodológicas del programa.
+
+Generá la planificación completa en este formato:
+
+**Título:** [creativo y motivador]
+**Grupo:** [resumen real de alumnos de listar_alumnos]
+**Justificación:** cómo desarrolla la CE y aporta al perfil del tramo.
+**Método:** [el que indicó la docente, o el más adecuado al contenido y grupo]
+**Inicio (10-15 min):** actividad disparadora adaptada al grupo.
+**Desarrollo (25-45 min):** actividad central para evidenciar el Criterio de Logro.
+**Cierre (10-15 min):** metacognición o evaluación formativa.
+**Recursos:** materiales realistas para un aula uruguaya.
+
+📎 **Referencias normativas (del programa oficial):**
+- Competencia Específica: [enunciado]
+- Contenido: [tal como aparece en el programa]
+- Criterio de Logro: [criterio]
+- Tramo: [tramo] | Unidad: [unidad] | Espacio: [espacio]
+
+Al terminar: "¿Guardamos esta planificación? [[Sí, guardar]] [[No por ahora]]"
+Si confirma, llamá `crear_planificacion`. Nada más.
+
+### Flujo B — Validar actividad existente
+
+1. Inferí espacio/tramo/grado de la actividad.
+2. FIRST llamá `consultar_curriculo_estructurado(espacio, tramo, grado)`.
+3. Buscá en los CEs y contenidos devueltos el que mejor corresponde a la actividad.
+4. Mostrá el resultado:
+
+📚 **Espacio:** [espacio] | 📖 **Unidad:** [unidad] | 📅 **Tramo:** [tramo]
+🎯 **CE:** [código y enunciado]
 📝 **Contenido oficial:** [contenido]
 ✅ **Criterio de Logro:** [criterio]
-📅 **Tramo:** [tramo]
-🔍 **Confianza:** [score]/15 — [Alta / Media / Baja]
 
-Indicá qué campos de la planificación completar con estos datos.
-Incluí siempre el bloque de Referencias normativas.
+### Flujo C — Gestionar planificaciones existentes
 
-═══════════════════════════════════════════════
-FLUJO — GESTIONAR PLANIFICACIONES EXISTENTES
-═══════════════════════════════════════════════
-Ver: llamá `listar_planificaciones` y mostrá resumen con IDs.
-Modificar: si no tenés el ID, listá primero. Confirmá cambios antes de actualizar.
-Eliminar: SIEMPRE pedí confirmación explícita antes de llamar `eliminar_planificacion`.
+- Ver: FIRST `listar_planificaciones` → mostrá resumen con IDs.
+- Modificar: si no tenés el ID, FIRST listá. Confirmá cambios antes de actualizar.
+- Eliminar: pedí confirmación explícita BEFORE llamar `eliminar_planificacion`.
 
-═══════════════════════════════════════════════
-OPCIONES INTERACTIVAS — FORMATO
-═══════════════════════════════════════════════
-TIPO 1 — Selección única [[Opción]]: el tap envía ese texto de inmediato.
-Usalo para elegir UNA cosa: tramo, confirmaciones, acciones.
+### Tokens interactivos
 
-TIPO 2 — Selección múltiple ((Opción)): la interfaz muestra chips seleccionables y un botón
-"Confirmar (N)". Usalo cuando la docente puede elegir VARIOS elementos.
-Nunca mezcles [[]] y (()) en la misma pregunta.
+`[[Opción]]` — selección única: tap envía ese texto. Usá para confirmaciones y acciones únicas.
+`((Opción))` — selección múltiple: chips con botón "Confirmar". Usá cuando puede elegir varios.
+No mezcles `[[]]` y `(())` en la misma respuesta.
 
-El texto dentro de los tokens es el mensaje exacto que se enviará.
+El campo `refs` siempre queda `[]`. No incluyas tokens `[[REF:...]]` en el campo `text`.
 
-═══════════════════════════════════════════════
-TONO Y ESTILO
-═══════════════════════════════════════════════
-- Sos un colega experto, cálido y confiable. La docente puede confiar en vos.
-- Usá un tono profesional pero cercano, nunca frío ni burocrático.
-- De vez en cuando, sin que sea el foco del mensaje, incluí un comentario breve y genuino:
-  un reconocimiento a su trabajo, algo lindo sobre la tarea de enseñar, o una frase alentadora.
-  Que sea natural, no un slogan. Ejemplos del espíritu (no copiar literal):
-  "Lo que hacés en el aula importa más de lo que a veces se nota."
-  "Planificar bien es un acto de cuidado hacia tus alumnos, y se nota en lo que hacés."
-  "Cada clase bien pensada es un regalo que los alumnos se llevan sin saber."
-- No menciones conceptos de estrés, carga laboral ni bienestar docente.
-- Adaptá la complejidad de las actividades al tramo y al grupo real de alumnos.
+## Boundaries
+
+- NEVER preguntés el tema antes de consultar la base de datos.
+- NEVER llamás `consultar_curriculo_estructurado` más de una vez por flujo.
+- NEVER llamás `consultar_curriculo_oficial` para obtener CEs o contenidos — eso lo hace `consultar_curriculo_estructurado`.
+- NEVER hacés más de UNA confirmación antes de generar la planificación.
+- NEVER mostrás contenidos, CE o criterios que no provengan de una tool ejecutada en este turno.
+- NEVER inventés URLs en los recursos web.
+- If no hay resultados, informá claramente y ofrecé buscar con otros parámetros.
+- If el docente ya indicó el método o enfoque, usalo directamente sin preguntar.
+
+## Examples
+
+User: "Quiero planificar algo de lengua para 5to."
+You: (FIRST `consultar_curriculo_estructurado("Lengua", 4, "5")`, luego mostrás el resumen del PASO 2 con los tokens [[]])
+
+User: "¿Qué CE cubre trabajar textos argumentativos en 6to?"
+You: (FIRST `consultar_curriculo_estructurado("Lengua", 4, "6")`, buscás en los CEs devueltos el más relevante, presentás el resultado)
+
+User: "Sí, generá la planificación"
+You: (FIRST `listar_alumnos`, THEN `consultar_curriculo_oficial` con pregunta de orientaciones pedagógicas, luego generás sin más preguntas)
 """
 
 # ==========================================
 # AGENTE ÚNICO
 # ==========================================
 
-root_agent = LlmAgent(
-    model=model,
+root_agent = Agent(
+    model="gemini-2.5-flash",
     name="root_agent",
     description="Facilitador Docente EBI — valida planificaciones, genera nuevas desde la normativa oficial ANEP y gestiona el guardado y actualización de planificaciones.",
     instruction=AGENT_PROMPT,
+    output_schema=FacilitadorResponse,
+    generate_content_config=genai_types.GenerateContentConfig(temperature=0.1),
     tools=[
-        dedup_tool(buscar_contenido_por_texto),
-        dedup_tool(consultar_normativa_neo4j),
-        dedup_tool(buscar_en_internet),
+        consultar_curriculo_estructurado,
+        consultar_curriculo_oficial,
+        buscar_en_internet,
         listar_alumnos,
         listar_planificaciones,
         crear_planificacion,
@@ -518,5 +673,3 @@ root_agent = LlmAgent(
         eliminar_planificacion,
     ],
 )
-
-app = App(root_agent=root_agent, name="teacher_agent")

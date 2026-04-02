@@ -2,3 +2,5 @@ PyMuPDF
 neo4j
 duckduckgo-search
 beautifulsoup4
+pdfplumber
+openai
