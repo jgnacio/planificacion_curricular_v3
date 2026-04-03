@@ -12,12 +12,31 @@
                 {
                   "codigo": "CE1",
                   "texto": "Incorpora paulatinamente el lenguaje matemático relacionándolo con su entorno más próximo para comunicar ideas y decisiones tomadas. Contribuye al desarrollo de las compe tencias generales del MCN: Comunicación, Pensamiento científico, Pensamiento computacio nal, Metacognitiva, Relación con los otros, Ciudadanía local, global y digital, Pensamiento críti co, Iniciativa y orientación a la acción",
-                  "mcn": []
+                  "mcn": [
+                    "Comunicación",
+                    "Pensamiento científico",
+                    "Pensamiento computacional",
+                    "Metacognitiva",
+                    "Relación con otros",
+                    "Ciudadanía local, global y digital",
+                    "Pensamiento crítico",
+                    "Iniciativa y orientación a la acción"
+                  ]
                 },
                 {
                   "codigo": "CE2",
                   "texto": "Utiliza diferentes estrategias matemáticas explicando los procedimientos realizados para resolver problemas en distintos contextos. Contribuye al desarrollo de las competencias ge nerales del MCN: Pensamiento creativo, Pensamiento científico, Pensamiento computacional, Metacognitiva, Relación con los otros, Pensamiento crítico, Iniciativa y orientación a la acción, Comunicación, Intrapersonal",
-                  "mcn": []
+                  "mcn": [
+                    "Pensamiento creativo",
+                    "Pensamiento científico",
+                    "Pensamiento computacional",
+                    "Metacognitiva",
+                    "Relación con otros",
+                    "Pensamiento crítico",
+                    "Iniciativa y orientación a la acción",
+                    "Comunicación",
+                    "Intrapersonal"
+                  ]
                 },
                 {
                   "codigo": "CE3",
@@ -26,7 +45,7 @@
                     "Pensamiento científico",
                     "Pensamiento computacional",
                     "Metacognitiva",
-                    "Relación con los otros",
+                    "Relación con otros",
                     "Ciudadanía local, global y digital",
                     "Pensamiento crítico",
                     "Iniciativa y orientación a la acción",
@@ -44,14 +63,22 @@
                     "Metacognitiva",
                     "Pensamiento crítico",
                     "Pensamiento creativo",
-                    "Iniciativa y orienta ción a la acción",
+                    "Iniciativa y orientación a la acción",
                     "Intrapersonal"
                   ]
                 },
                 {
                   "codigo": "CE5",
                   "texto": "Identifica el error en su producción matemática perseverando en la búsqueda de nuevas estrategias para generar otras alternativas y contribuir al desarrollo integral de todos. Contribu ye al desarrollo de las competencias generales del MCN: Comunicación, Pensamiento compu tacional, Metacognitiva, Relación con los otros, Ciudadanía local, global y digital, Pensamiento crítico, Iniciativa y orientación a la acción e intrapersonal",
-                  "mcn": []
+                  "mcn": [
+                    "Comunicación",
+                    "Pensamiento computacional",
+                    "Metacognitiva",
+                    "Relación con otros",
+                    "Ciudadanía local, global y digital",
+                    "Pensamiento crítico",
+                    "Iniciativa y orientación a la acción"
+                  ]
                 },
                 {
                   "codigo": "CE6",
@@ -61,7 +88,7 @@
                     "Pensamiento científico",
                     "Pensamiento crítico",
                     "Metacognitiva",
-                    "Relación con los otros",
+                    "Relación con otros",
                     "Ciudadanía local, global y digital",
                     "Iniciativa y orientación a la acción"
                   ]
@@ -73,7 +100,7 @@
                     "Comunicación",
                     "Pensamiento científico",
                     "Metacognitiva",
-                    "Relación con los otros",
+                    "Relación con otros",
                     "Ciudadanía local, global y digital",
                     "Pensamiento crítico",
                     "Iniciativa y orientación a la acción",
@@ -546,14 +573,22 @@
                   "codigo": "CE1",
                   "texto": "Ensaya respuestas y experimenta con una gama de opciones al poner sus ideas a prueba acerca de los sistemas materiales, para responder a distintas situaciones simples de su entor no, utilizando diferentes formas creativas, lógicas o heurísticas",
                   "mcn": [
-                    "Comunicación. Pensamiento científico. Pensamiento crítico. Pensamiento creativo. Iniciativa y orientación a la acción"
+                    "Comunicación",
+                    "Pensamiento científico",
+                    "Pensamiento crítico",
+                    "Pensamiento creativo",
+                    "Iniciativa y orientación a la acción"
                   ]
                 },
                 {
                   "codigo": "CE2",
                   "texto": "Identifica distintos puntos de vista y construye alternativas a situaciones concretas de sistemas materiales al relacionarse con sus pares y con la orientación del docente, e infiere la información a partir de elementos icónicos y verbales, para comunicarse a través de diferentes lenguajes, medios y tecnologías",
                   "mcn": [
-                    "Pensamiento científico. Pensamiento crítico. Comunicación. Relacionamiento con otros. Iniciativa y orientación a la acción"
+                    "Pensamiento científico",
+                    "Pensamiento crítico",
+                    "Comunicación",
+                    "Relación con otros",
+                    "Iniciativa y orientación a la acción"
                   ]
                 },
                 {
@@ -562,7 +597,8 @@
                   "mcn": [
                     "Pensamiento crítico",
                     "Comunicación",
-                    "Relación con otros. Pensamiento creativo"
+                    "Relación con otros",
+                    "Pensamiento creativo"
                   ]
                 },
                 {
@@ -571,16 +607,20 @@
                   "mcn": [
                     "Metacognitiva",
                     "Intrapersonal",
-                    "Pensamiento científico. Relacionamiento con otros. Pensamiento computacional"
+                    "Pensamiento científico",
+                    "Relación con otros",
+                    "Pensamiento computacional"
                   ]
                 },
                 {
                   "codigo": "CE5",
                   "texto": "Vincula conocimientos científicos a evidencias concretas con incipiente autonomía, a partir de fenómenos simples de su entorno escolar, familiar y comunitario, identificando problemas socioambientales e indagando sobre sus causas, lo que le permite cuestionar las explicaciones científicas y técnicas con base en sus ideas previas, interactuando con disposi tivos tecnológicos",
                   "mcn": [
-                    "Metacog nitiva",
+                    "Metacognitiva",
                     "Intrapersonal",
-                    "Pensamiento científico. Ciudadanía local-global-digital. Pensamiento computacional"
+                    "Pensamiento científico",
+                    "Ciudadanía local, global y digital",
+                    "Pensamiento computacional"
                   ]
                 }
               ],
@@ -899,7 +939,7 @@
                   "codigo": "CE2",
                   "texto": "Busca estrategias y analiza posibilidades para abordar de forma colaborativa problemas socioambientales locales, vinculando conocimientos científicos a evidencias concretas con incipiente autonomía",
                   "mcn": [
-                    "Pen samiento creativo",
+                    "Pensamiento creativo",
                     "Pensamiento crítico",
                     "Pensamiento científico",
                     "Metacognitiva",
@@ -909,12 +949,21 @@
                 {
                   "codigo": "CE3",
                   "texto": "Indaga y formula preguntas interactuando con sus pares con guía del maestro, sobre fe nómenos concretos y su incidencia en el equilibrio ambiental para cuestionar afirmaciones concretas sobre fenómenos de su entorno. Contribuye al desarrollo de las competencias gene rales del MCN: Comunicación, Pensamiento crítico, Pensamiento científico, Relación con otros",
-                  "mcn": []
+                  "mcn": [
+                    "Comunicación",
+                    "Pensamiento crítico",
+                    "Pensamiento científico",
+                    "Relación con otros"
+                  ]
                 },
                 {
                   "codigo": "CE4",
                   "texto": "Identifica y comienza a comparar y reflexionar sobre las etapas de diferentes procesos naturales de su entorno, en diálogo consigo mismo y con los otros, demostrando cierto grado de autonomía para responder a situaciones cotidianas. Contribuye al desarrollo de las com petencias generales del MCN: Pensamiento computacional, Iniciativa y orientación a la acción, Intrapersonal",
-                  "mcn": []
+                  "mcn": [
+                    "Pensamiento computacional",
+                    "Iniciativa y orientación a la acción",
+                    "Intrapersonal"
+                  ]
                 },
                 {
                   "codigo": "CE5",
@@ -928,14 +977,19 @@
                 {
                   "codigo": "CE6",
                   "texto": "Analiza la veracidad de la información referente a la temática socioambiental, y reflexiona sobre sus intereses y motivaciones, con guía del adulto para valorar la relación individuo-am biente. Contribuye al desarrollo de las competencias generales MCN: Comunicación, Ciudada nía local, global y digital, Intrapersonal, Iniciativa y orientación a la acción y Relación con los otros",
-                  "mcn": []
+                  "mcn": [
+                    "Comunicación",
+                    "Ciudadanía local, global y digital",
+                    "Intrapersonal",
+                    "Iniciativa y orientación a la acción"
+                  ]
                 },
                 {
                   "codigo": "CE7",
                   "texto": "Reconoce las emociones propias y las de los otros, internaliza límites y reglas y participa en la resolución de conflictos para el autocuidado y el cuidado del entorno, con mediación del adulto",
                   "mcn": [
                     "Intrapersonal",
-                    "Rela ción con los otros"
+                    "Relación con otros"
                   ]
                 }
               ],
@@ -1711,11 +1765,11 @@
                     "Pensamiento crítico",
                     "Pensamiento científico",
                     "Pensamiento computacional",
-                    "Me tacognitiva",
+                    "Metacognitiva",
                     "Iniciativa y orientación a la acción",
                     "Pensamiento creativo",
                     "Relación con otros",
-                    "intra personal"
+                    "Intrapersonal"
                   ]
                 },
                 {
@@ -1726,11 +1780,11 @@
                     "Pensamiento crítico",
                     "Pensamiento científico",
                     "Pensamiento computacional",
-                    "Me tacognitiva",
+                    "Metacognitiva",
                     "Iniciativa y orientación a la acción",
                     "Pensamiento creativo",
                     "Relación con otros",
-                    "intra personal",
+                    "Intrapersonal",
                     "Ciudadanía local, global y digital"
                   ]
                 },
@@ -1752,12 +1806,34 @@
                 {
                   "codigo": "CE4",
                   "texto": "Identifica, describe y explica las características y dinámicas de los bienes ambientales con mediación para tomar conciencia de su importancia. Contribuye al desarrollo de las compe tencias generales del MCN: Comunicación, Pensamiento crítico, Pensamiento científico, Pensa miento computacional, Metacognitiva, Iniciativa y orientación a la acción, Pensamiento creati vo, Relación con otros, Intrapersonal, Ciudadanía local, global y digital",
-                  "mcn": []
+                  "mcn": [
+                    "Comunicación",
+                    "Pensamiento crítico",
+                    "Pensamiento científico",
+                    "Pensamiento computacional",
+                    "Metacognitiva",
+                    "Iniciativa y orientación a la acción",
+                    "Pensamiento creativo",
+                    "Relación con otros",
+                    "Intrapersonal",
+                    "Ciudadanía local, global y digital"
+                  ]
                 },
                 {
                   "codigo": "CE5",
                   "texto": "Observa, experimenta e inicia la reflexión y comunica los procesos observables de los fenómenos geológicos con mediación para valorar los bienes naturales. Contribuye al desarro llo de las competencias generales del MCN: Comunicación, Pensamiento crítico, Pensamiento científico, Pensamiento computacional, Metacognitiva, Iniciativa y orientación a la acción, Pen samiento creativo, Relación con otros, Intrapersonal, Ciudadanía local, global y digital. Contenidos, criterios de logro y su contribución al desarrollo de las competencias específicas Los vínculos que se detallan en la siguiente tabla entre las competencias, los contenidos y los criterios de logro responden a una jerarquización sin ser excluyentes. Competencias específicas relacionadas",
-                  "mcn": []
+                  "mcn": [
+                    "Comunicación",
+                    "Pensamiento crítico",
+                    "Pensamiento científico",
+                    "Pensamiento computacional",
+                    "Metacognitiva",
+                    "Iniciativa y orientación a la acción",
+                    "Pensamiento creativo",
+                    "Relación con otros",
+                    "Intrapersonal",
+                    "Ciudadanía local, global y digital"
+                  ]
                 }
               ],
               "contenidos": {},
@@ -1774,7 +1850,11 @@
                 {
                   "codigo": "CE1",
                   "texto": "Narra, describe, dialoga, explica e incorpora vocabulario para comunicarse según los re querimientos de cada situación (orales y escritas). Contribuye al desarrollo de las competen cias generales del MCN: Comunicación, Pensamiento creativo, Pensamiento crítico, Intraperso nal y Relacionamiento con otros",
-                  "mcn": []
+                  "mcn": [
+                    "Comunicación",
+                    "Pensamiento creativo",
+                    "Pensamiento crítico"
+                  ]
                 },
                 {
                   "codigo": "CE2",
@@ -1783,7 +1863,7 @@
                     "Comunicación",
                     "Pensamiento creativo",
                     "Intrapersonal",
-                    "Rela cionamiento con otros",
+                    "Relación con otros",
                     "Ciudadanía local, global y digital"
                   ]
                 },
@@ -1795,7 +1875,7 @@
                     "Pensamiento crítico",
                     "Pensamiento computacional",
                     "Intrapersonal",
-                    "Relacionamiento con otros"
+                    "Relación con otros"
                   ]
                 },
                 {
@@ -1815,8 +1895,7 @@
                     "Comunicación",
                     "Pensamiento crítico",
                     "Pensamiento computacional",
-                    "Ciudadanía local",
-                    "glo bal y digital"
+                    "Ciudadanía local, global y digital"
                   ]
                 },
                 {
@@ -1832,7 +1911,13 @@
                 {
                   "codigo": "CE7",
                   "texto": "Explora sus posibilidades expresivas en diferentes contextos intraescolares y sociales para fortalecer la construcción de su identidad. Contribuye al desarrollo de las competencias gene rales del MCN: Comunicación, Pensamiento creativo, Metacognitiva, Intrapersonal, Ciudadanía local, global y digital",
-                  "mcn": []
+                  "mcn": [
+                    "Comunicación",
+                    "Pensamiento creativo",
+                    "Metacognitiva",
+                    "Intrapersonal",
+                    "Ciudadanía local, global y digital"
+                  ]
                 },
                 {
                   "codigo": "CE8",
@@ -1840,10 +1925,10 @@
                   "mcn": [
                     "Comunicación",
                     "Pensamiento creativo",
-                    "Pen samiento computacional",
+                    "Pensamiento computacional",
                     "Intrapersonal",
                     "Iniciativa y orientación a la acción",
-                    "Relacionamiento con otros"
+                    "Relación con otros"
                   ]
                 },
                 {
@@ -1853,8 +1938,8 @@
                     "Comunicación",
                     "Pensamiento creativo",
                     "Intrapersonal",
-                    "Iniciativa y orienta ción a la acción",
-                    "Relacionamiento con los otros"
+                    "Iniciativa y orientación a la acción",
+                    "Relación con otros"
                   ]
                 },
                 {
@@ -1863,7 +1948,7 @@
                   "mcn": [
                     "Comunicación",
                     "Pensamiento creativo",
-                    "Me tacognitiva",
+                    "Metacognitiva",
                     "Intrapersonal",
                     "Iniciativa y orientación a la acción",
                     "Ciudadanía local, global y digital"
@@ -3081,7 +3166,10 @@
                 {
                   "codigo": "CE2",
                   "texto": "Reconoce características de su entorno inmediato usando lenguaje sencillo reconociendo y respetando los derechos, deberes y responsabilidades en diversos espacios de participación con la mediación del docente para involucrarse activamente en las tareas. Contribuye al desa rrollo de las competencias generales del MCN: Comunicación, Ciudadanía local, global y digital",
-                  "mcn": []
+                  "mcn": [
+                    "Comunicación",
+                    "Ciudadanía local, global y digital"
+                  ]
                 },
                 {
                   "codigo": "CE3",
@@ -3118,19 +3206,22 @@
                   "codigo": "CE7",
                   "texto": "Explora sobre un evento de su entorno inmediato indagando sobre sus causas de manera sencilla, con mediación del docente de la lengua meta, con el fin de contrastar las distintas rea lidades",
                   "mcn": [
-                    "Pensamiento cientí fico"
+                    "Pensamiento científico"
                   ]
                 },
                 {
                   "codigo": "CE8",
                   "texto": "Reflexiona sobre su aprendizaje lingüístico a partir del monitoreo de su proceso, e identi fica y comprende sus emociones y sentimientos en su entorno inmediato, con mediación del docente, para identificar sus fortalezas y necesidades. Contribuye al desarrollo de las compe tencias generales del MCN: Metacognitiva, Intrapersonal",
-                  "mcn": []
+                  "mcn": [
+                    "Metacognitiva",
+                    "Intrapersonal"
+                  ]
                 },
                 {
                   "codigo": "CE9",
                   "texto": "Se vincula con el otro y con su entorno inmediato mediante juegos, canciones o textos orales con el fin de usar la lengua meta",
                   "mcn": [
-                    "Relación con los otros"
+                    "Relación con otros"
                   ]
                 }
               ],
@@ -3766,32 +3857,63 @@
                 {
                   "codigo": "CE1",
                   "texto": "Elabora con la guía del docente argumentos pertinentes a la temática histórica, la situa ción y el interlocutor para el desarrollo de una oralidad fluida. Contribuye a las competencias generales del MCN: Comunicación, Pensamiento crítico, Metacognitiva",
-                  "mcn": []
+                  "mcn": [
+                    "Comunicación",
+                    "Pensamiento crítico",
+                    "Metacognitiva"
+                  ]
                 },
                 {
                   "codigo": "CE2",
                   "texto": "Construye explicaciones sencillas sobre los fenómenos y sujetos sociales que observa, para comprender la sociedad en la que vive. Contribuye a las competencias generales del MCN: Comunicación, Pensamiento crítico, Metacognitiva",
-                  "mcn": []
+                  "mcn": [
+                    "Comunicación",
+                    "Pensamiento crítico",
+                    "Metacognitiva"
+                  ]
                 },
                 {
                   "codigo": "CE3",
                   "texto": "Explica las manifestaciones culturales de los grupos sociales para desarrollar la sensibili dad y su punto de vista personal. Contribuye a las competencias generales del MCN: Comuni cación, Pensamiento crítico, Ciudadanía local, global y digital",
-                  "mcn": []
+                  "mcn": [
+                    "Comunicación",
+                    "Pensamiento crítico",
+                    "Ciudadanía local, global y digital"
+                  ]
                 },
                 {
                   "codigo": "CE4",
                   "texto": "Participa y propone en proyectos de indagación sobre temáticas contextualizadas para resolver situaciones problema de la comunidad. Contribuye a las competencias generales del MCN: Ciudadanía local, global y digital, Comunicación, Pensamiento crítico, Pensamiento creati vo, Relacionamiento con otros, Metacognitiva, Intrapersonal, Iniciativa y orientación a la acción",
-                  "mcn": []
+                  "mcn": [
+                    "Ciudadanía local, global y digital",
+                    "Comunicación",
+                    "Pensamiento crítico",
+                    "Pensamiento creativo",
+                    "Relación con otros",
+                    "Metacognitiva",
+                    "Intrapersonal",
+                    "Iniciativa y orientación a la acción"
+                  ]
                 },
                 {
                   "codigo": "CE5",
                   "texto": "Selecciona herramientas digitales para interpretar y organizar información en su contex to histórico. Contribuye a las competencias generales del MCN: Pensamiento computacional, Pensamiento científico, Pensamiento crítico",
-                  "mcn": []
+                  "mcn": [
+                    "Pensamiento computacional",
+                    "Pensamiento científico",
+                    "Pensamiento crítico"
+                  ]
                 },
                 {
                   "codigo": "CE6",
                   "texto": "Construye el proceso de escritura en historia a partir de la curiosidad e intereses para su apropiación. Contribuye a las competencias generales del MCN: Comunicación, Pensamiento crítico, Pensamiento creativo, Intrapersonal, Relacionamiento con otros",
-                  "mcn": []
+                  "mcn": [
+                    "Comunicación",
+                    "Pensamiento crítico",
+                    "Pensamiento creativo",
+                    "Intrapersonal",
+                    "Relación con otros"
+                  ]
                 }
               ],
               "contenidos": {
@@ -4122,7 +4244,11 @@
                 {
                   "codigo": "CE1",
                   "texto": "Se expresa y desarrolla estrategias de comunicación contextualizadas, para referirse a te máticas vinculadas a fenómenos sociales. Contribuye al desarrollo de las competencias gene rales del MCN: Comunicación, Pensamiento crítico, Pensamiento científico",
-                  "mcn": []
+                  "mcn": [
+                    "Comunicación",
+                    "Pensamiento crítico",
+                    "Pensamiento científico"
+                  ]
                 },
                 {
                   "codigo": "CE2",
@@ -4138,7 +4264,7 @@
                   "texto": "Comienza a reconocer problemas sociales, identificando diferentes puntos de vista, cons truyendo nuevas alternativas a situaciones concretas; para diferenciar emociones de argumen tos",
                   "mcn": [
                     "Pensamiento crítico",
-                    "Pen samiento científico",
+                    "Pensamiento científico",
                     "Intrapersonal"
                   ]
                 },
@@ -4153,12 +4279,20 @@
                 {
                   "codigo": "CE5",
                   "texto": "Reconoce y utiliza los recursos disponibles para el acceso a la información, que le permi tan comprender los distintos fenómenos sociales. Contribuye al desarrollo de las competen cias generales del MCN: Pensamiento computacional, Pensamiento científico, Metacognitiva, Intrapersonal",
-                  "mcn": []
+                  "mcn": [
+                    "Pensamiento computacional",
+                    "Pensamiento científico",
+                    "Metacognitiva",
+                    "Intrapersonal"
+                  ]
                 },
                 {
                   "codigo": "CE6",
                   "texto": "Comienza a reconocer sus emociones y sentimientos en la construcción de su identidad, en vínculo con las demás personas, para explorar su entorno y transformarlo. Contribuye al de sarrollo de las competencias generales del MCN: Intrapersonal, Relacionamiento con los otros",
-                  "mcn": []
+                  "mcn": [
+                    "Intrapersonal",
+                    "Relación con otros"
+                  ]
                 },
                 {
                   "codigo": "CE7",
@@ -4166,36 +4300,52 @@
                   "mcn": [
                     "Pensamiento científico",
                     "Iniciativa y orientación a la acción",
-                    "Relación con los otros"
+                    "Relación con otros"
                   ]
                 },
                 {
                   "codigo": "CE8",
                   "texto": "Comienza a internalizar habilidades sociales que le permiten interactuar con los otros, para participar en actividades colectivas de su comunidad. Contribuye al desarrollo de las com petencias generales del MCN: Relacionamiento con los otros, Intrapersonal",
-                  "mcn": []
+                  "mcn": [
+                    "Relación con otros",
+                    "Intrapersonal"
+                  ]
                 },
                 {
                   "codigo": "CE8.1",
                   "texto": "Reconoce estereotipos y prejuicios que obstaculizan el desarrollo pleno de la persona y de los demás, para interactuar en su entorno",
                   "mcn": [
-                    "Relacionamiento con los otros",
+                    "Relación con otros",
                     "Intrapersonal"
                   ]
                 },
                 {
                   "codigo": "CE9",
                   "texto": "Identifica derechos y responsabilidades y reconoce su implicancia para la vida demo crática. Contribuye a las competencias generales del MCN: Ciudadanía local, global y digital, Pensamiento crítico, Iniciativa y orientación a la acción",
-                  "mcn": []
+                  "mcn": [
+                    "Ciudadanía local, global y digital",
+                    "Pensamiento crítico",
+                    "Iniciativa y orientación a la acción"
+                  ]
                 },
                 {
                   "codigo": "CE10",
                   "texto": "Reconoce y valora la diversidad en sus prácticas cotidianas para la vida en sociedad. Contribuye a las competencias generales del MCN: Ciudadanía local, global y digital, Pensa miento crítico, Iniciativa y orientación a la acción",
-                  "mcn": []
+                  "mcn": [
+                    "Ciudadanía local, global y digital",
+                    "Pensamiento crítico",
+                    "Iniciativa y orientación a la acción"
+                  ]
                 },
                 {
                   "codigo": "CE10.1",
                   "texto": "Promueve iniciativas para mejorar su entorno escolar y comunitario, de forma demo crática, valorando la opinión del otro y el respeto mutuo. Contribuye a las competencias ge nerales del MCN: Ciudadanía local, global y digital, Relación con otros, Pensamiento crítico, Iniciativa y orientación a la acción",
-                  "mcn": []
+                  "mcn": [
+                    "Ciudadanía local, global y digital",
+                    "Relación con otros",
+                    "Pensamiento crítico",
+                    "Iniciativa y orientación a la acción"
+                  ]
                 }
               ],
               "contenidos": {
@@ -4415,20 +4565,31 @@
                     "Iniciativa y orientación a la acción",
                     "Ciudadanía local, global y digital",
                     "Metacognitiva",
-                    "Pen samiento computacional",
+                    "Pensamiento computacional",
                     "Pensamiento científico"
                   ]
                 },
                 {
                   "codigo": "CE4",
                   "texto": "Representa y explica las características de los diferentes territorios con la mediación del docente para comprender su dinámica. Contribuye al desarrollo de las competencias gene rales del MCN: Pensamiento científico, Ciudadanía local, global y digital, Intrapersonal, Rela ción con otros, Metacognitiva, Pensamiento creativo, Pensamiento computacional, Iniciativa y orientación a la acción, Comunicación, Pensamiento crítico",
-                  "mcn": []
+                  "mcn": [
+                    "Pensamiento científico",
+                    "Ciudadanía local, global y digital",
+                    "Intrapersonal",
+                    "Relación con otros",
+                    "Metacognitiva",
+                    "Pensamiento creativo",
+                    "Pensamiento computacional",
+                    "Iniciativa y orientación a la acción",
+                    "Comunicación",
+                    "Pensamiento crítico"
+                  ]
                 },
                 {
                   "codigo": "CE5",
                   "texto": "Propone preguntas y respuestas alternativas, reconoce problemas y oportunidades so cioambientales y busca sus causas y consecuencias con la combinación de ideas propias y de otras personas",
                   "mcn": [
-                    "Comunica ción",
+                    "Comunicación",
                     "Iniciativa y orientación a la acción",
                     "Pensamiento científico",
                     "Pensamiento crítico",
@@ -4444,7 +4605,7 @@
                   "texto": "Indaga, identifica y comienza a reflexionar sobre la influencia del uso de la tecnología en las actividades productivas con mediación, para reconocer el impacto ambiental",
                   "mcn": [
                     "Comunicación",
-                    "Pensamiento computacio nal",
+                    "Pensamiento computacional",
                     "Pensamiento científico",
                     "Ciudadanía local, global y digital",
                     "Pensamiento creativo",
@@ -4457,7 +4618,18 @@
                 {
                   "codigo": "CE7",
                   "texto": "Identifica y comunica opiniones sobre la población en actividades colaborativas, media das por el docente, para conocer y valorar su composición y diversidad. Contribuye al desarro llo de las competencias generales del MCN: Relación con otros, Comunicación, Intrapersonal, Iniciativa y orientación a la acción, Pensamiento creativo, Metacognitiva, Pensamiento crítico, Ciudadanía local, global y digital, Pensamiento computacional, Pensamiento científico",
-                  "mcn": []
+                  "mcn": [
+                    "Relación con otros",
+                    "Comunicación",
+                    "Intrapersonal",
+                    "Iniciativa y orientación a la acción",
+                    "Pensamiento creativo",
+                    "Metacognitiva",
+                    "Pensamiento crítico",
+                    "Ciudadanía local, global y digital",
+                    "Pensamiento computacional",
+                    "Pensamiento científico"
+                  ]
                 }
               ],
               "contenidos": {
@@ -4667,7 +4839,9 @@
                 {
                   "codigo": "CE1",
                   "texto": "Competencia sensoperceptiva. Explora y percibe a través de los sentidos el mundo visual que lo rodea para desarrollar experiencias estéticas. Contribuye al desarrollo de las competen cias generales del MCN: Comunicación",
-                  "mcn": []
+                  "mcn": [
+                    "Comunicación"
+                  ]
                 },
                 {
                   "codigo": "CE2",
@@ -4681,12 +4855,21 @@
                 {
                   "codigo": "CE3",
                   "texto": "Competencia productivo-creativa. Se sensibiliza frente al mundo que lo rodea a través de imágenes visuales para generar sus propias creaciones. Contribuye al desarrollo de las compe tencias generales del MCN: Comunicación, Pensamiento creativo, Pensamiento Computacio nal",
-                  "mcn": []
+                  "mcn": [
+                    "Comunicación",
+                    "Pensamiento creativo",
+                    "Pensamiento computacional"
+                  ]
                 },
                 {
                   "codigo": "CE4",
                   "texto": "Competencia cultural. Identifica valores culturales en las obras de arte, relacionados con la vida de la comunidad, lo nacional y lo regional para construir su propia identidad. Contribu ye al desarrollo de las competencias generales del MCN: Comunicación, Relacionamiento con otros, Ciudadanía local, global y digital, Intrapersonal",
-                  "mcn": []
+                  "mcn": [
+                    "Comunicación",
+                    "Relación con otros",
+                    "Ciudadanía local, global y digital",
+                    "Intrapersonal"
+                  ]
                 },
                 {
                   "codigo": "CE5",
@@ -4699,7 +4882,10 @@
                 {
                   "codigo": "CE6",
                   "texto": "Competencia en la práctica de artes visuales colectivas. Explora y desarrolla imágenes visuales de forma colectiva para elaborar producciones artísticas en grupo. Contribuye al de sarrollo de las competencias generales del MCN: Pensamiento creativo, Relación con los otros",
-                  "mcn": []
+                  "mcn": [
+                    "Pensamiento creativo",
+                    "Relación con otros"
+                  ]
                 }
               ],
               "contenidos": {},
@@ -4723,7 +4909,7 @@
                   "mcn": [
                     "Intrapersonal",
                     "Comunicación",
-                    "Relacionamiento con otros",
+                    "Relación con otros",
                     "Metacognitiva"
                   ]
                 },
@@ -4743,7 +4929,7 @@
                   "texto": "Competencia cultural Reconoce e identifica de forma autónoma manifestaciones musicales de diversas culturas y épocas mostrando curiosidad e interés por ellas. Comienza a elaborar un juicio y un gusto mu sical propio a partir de elementos identitarios de su entorno (grupo de amigos, familia, etc.). Identifica auditivamente y relaciona (con andamiaje del docente) elementos básicos que pue de asociar por similitud o diferenciación entre manifestaciones musicales cercanas y lejanas a su entorno cultural, de distintas épocas y procedencias. Amplía su repertorio de canciones y melodías incorporando materiales que enriquecen su acervo cultural y expanden el marco de referencia de su universo musical. El desarrollo de esta competencia habilita la conformación de las bases de una ciudadanía cultural rica y diversa, impulsa procesos identitarios desde lo cognitivo y sensorial, amplía y di versifica el capital cultural del individuo y su comunidad, desarrollando valores de convivencia y comprensión de la diversidad. Ejes o dominios a desarrollar: capital cultural; interés, autonomía y participación; ciudadanía cultural",
                   "mcn": [
                     "Comunicación",
-                    "Relaciona miento con otros",
+                    "Relación con otros",
                     "Pensamiento científico",
                     "Ciudadanía local, global y digital",
                     "Metacognitiva"
@@ -4766,7 +4952,7 @@
                   "texto": "Competencia de la práctica musical colectiva Disfruta del canto, la práctica instrumental, el movimiento, el juego musical y la creación co lectiva. Desarrolla sentido de pertenencia comunitaria a partir de la práctica musical colectiva, habilitando la escucha activa, el respeto, la confianza y el desarrollo de la subjetividad a partir del encuentro con el otro. El desarrollo de esta competencia promueve la convivencia, la tolerancia y el disfrute colectivo de la práctica musical. Ejes o dominios a desarrollar: comunicación, diversidad, construcción cultural compartida",
                   "mcn": [
                     "Comunicación",
-                    "Relaciona miento con otros",
+                    "Relación con otros",
                     "Ciudadanía local, global y digital",
                     "Metacognitiva"
                   ]
@@ -4781,7 +4967,12 @@
                 {
                   "codigo": "CE1",
                   "texto": "Reconoce y se sensibiliza ante el hecho literario para el desarrollo de su subjetividad de forma mediada durante la lectura colectiva o individual. Contribuye al desarrollo de las compe tencias generales del MCN: Comunicación, Pensamiento creativo, Intrapersonal, Relación con otros",
-                  "mcn": []
+                  "mcn": [
+                    "Comunicación",
+                    "Pensamiento creativo",
+                    "Intrapersonal",
+                    "Relación con otros"
+                  ]
                 },
                 {
                   "codigo": "CE2",
@@ -4801,29 +4992,48 @@
                     "Comunicación",
                     "Pensamiento creativo",
                     "Pensamiento crítico",
-                    "Pensamiento computacio nal",
+                    "Pensamiento computacional",
                     "Iniciativa y orientación a la acción"
                   ]
                 },
                 {
                   "codigo": "CE4",
                   "texto": "Emplea estructuras argumentativas básicas en relación con las posibles interpretaciones de los personajes y otras situaciones planteadas por el texto literario para exponer su punto de vista y construir nuevos significados e interpretaciones. Contribuye al desarrollo de las com petencias generales del MCN: Pensamiento crítico, Pensamiento científico, Relación con otros, Ciudadanía local, global y digital",
-                  "mcn": []
+                  "mcn": [
+                    "Pensamiento crítico",
+                    "Pensamiento científico",
+                    "Relación con otros",
+                    "Ciudadanía local, global y digital"
+                  ]
                 },
                 {
                   "codigo": "CE5",
                   "texto": "Distingue acciones, personajes y hechos fantásticos de realistas, para elaborar de forma oral y escrita situaciones sencillas guiadas por el docente. Contribuye al desarrollo de la com petencia general del MCN: Comunicación, Pensamiento crítico, Pensamiento creativo, Iniciati va y orientación a la acción",
-                  "mcn": []
+                  "mcn": [
+                    "Comunicación",
+                    "Pensamiento crítico",
+                    "Pensamiento creativo",
+                    "Iniciativa y orientación a la acción"
+                  ]
                 },
                 {
                   "codigo": "CE6",
                   "texto": "Identifica los indicios para clasificar la voz narrativa interna o externa de un cuento de for ma mediada a través de la lectura de diversos relatos. Contribuye al desarrollo de la competen cia general del MCN: Comunicación, Pensamiento creativo, Pensamiento científico, Iniciativa y orientación a la acción",
-                  "mcn": []
+                  "mcn": [
+                    "Comunicación",
+                    "Pensamiento creativo",
+                    "Pensamiento científico",
+                    "Iniciativa y orientación a la acción"
+                  ]
                 },
                 {
                   "codigo": "CE7",
                   "texto": "Identifica los indicios de cada género literario para clasificar las obras con mediación docente. Contribuye al desarrollo de la competencia general del MCN: Comunicación, Pensa miento crítico, Pensamiento científico",
-                  "mcn": []
+                  "mcn": [
+                    "Comunicación",
+                    "Pensamiento crítico",
+                    "Pensamiento científico"
+                  ]
                 }
               ],
               "contenidos": {
@@ -5139,7 +5349,11 @@
                 {
                   "codigo": "CE1",
                   "texto": "Identifica, expresa y comunica sus ideas, sentimientos y emociones a través del lenguaje corporal, gestual, verbal o escrito, para comunicarse. Contribuye al desarrollo de las competen cias generales del MCN: Comunicación, Intrapersonal, Pensamiento creativo",
-                  "mcn": []
+                  "mcn": [
+                    "Comunicación",
+                    "Intrapersonal",
+                    "Pensamiento creativo"
+                  ]
                 },
                 {
                   "codigo": "CE2",
@@ -5147,7 +5361,7 @@
                   "mcn": [
                     "Pensamiento creativo",
                     "Comunicación",
-                    "Pensamiento científi co"
+                    "Pensamiento científico"
                   ]
                 },
                 {
@@ -5173,18 +5387,26 @@
                   "texto": "Descubre nuevas posibilidades con su cuerpo y su voz, utiliza sus emociones en el trabajo expresivo para fortalecer la confianza en sí mismo redescubriendo su expresividad en el juego dramático",
                   "mcn": [
                     "Intrapersonal",
-                    "Co municación"
+                    "Comunicación"
                   ]
                 },
                 {
                   "codigo": "CE6",
                   "texto": "Observa con mirada reflexiva e interactúa con el grupo aportando ideas creativas a sus pares, fortaleciendo el cuidado y la confianza en el otro y poniendo en práctica el respeto y la escucha, para la creación colectiva y la dramatización. Contribuye al desarrollo de las compe tencias generales del MCN: Relación con otros, Pensamiento creativo, Iniciativa y orientación a la acción",
-                  "mcn": []
+                  "mcn": [
+                    "Relación con otros",
+                    "Pensamiento creativo",
+                    "Iniciativa y orientación a la acción"
+                  ]
                 },
                 {
                   "codigo": "CE7",
                   "texto": "Interactúa con sus pares desde la creación escénica, asumiendo el compromiso con el grupo y respetando las consignas pautadas, desarrollando la tolerancia, reconociendo y acep tando todas las ideas para llegar a acuerdos y obtener resultados colectivos. Contribuye al de sarrollo de las competencias generales del MCN: Ciudadanía local, global y digital, Relación con otros, Pensamiento creativo",
-                  "mcn": []
+                  "mcn": [
+                    "Ciudadanía local, global y digital",
+                    "Relación con otros",
+                    "Pensamiento creativo"
+                  ]
                 }
               ],
               "contenidos": {
@@ -5437,13 +5659,11 @@
                   "texto": "Competencia sensoperceptiva Se vincula directamente con su entorno a través de habilidades perceptivas que le permiten reconocer, discriminar e identificar aspectos vinculados al cuerpo, el espacio, el tiempo, el mo vimiento, los objetos y las personas, para una permanente relación entre la expresión, la parti cipación y la creatividad. Evoca imágenes y las representa corporalmente para desarrollar procesos creativos y de inte racción con los objetos, relación con las personas y estímulos sensoriales. Expresa y produce movimientos mediante su sentido rítmico para el desarrollo sensopercepti vo a través de variados estímulos. Explora y reinterpreta corporalmente escenarios lúdicos tradicionales y contemporáneos para expresar creativamente sentimientos y emociones. Ejes temáticos: Percepción sensorial, interrelación del mundo interno y externo, pensamiento corporal",
                   "mcn": [
                     "Pensamiento creativo",
-                    "Pen samiento crítico",
+                    "Pensamiento crítico",
                     "Metacognitiva",
                     "Iniciativa y orientación a la acción",
                     "Intrapersonal",
-                    "Ciudadanía local",
-                    "global",
-                    "digital"
+                    "Ciudadanía local, global y digital"
                   ]
                 },
                 {
@@ -5451,7 +5671,7 @@
                   "texto": "Competencia interpretativa Representa a través de movimientos corporales melodías y canciones para el desarrollo expre sivo de sentimientos y emociones. Disfruta de la propia danza, juegos corporales y rondas tradicionales nacionales y universales, para la apropiación corporal interpretativa de la cultura nacional e internacional. Realiza sencillas coreografías mediante el juego y la modificación del espacio para la represen tación, apropiación y disfrute de las danzas circulares. Reconoce la organización rítmica y poética de la danza para el acercamiento a distintas obras patrimoniales y creadas. Ejes temáticos: Expresión, comunicación",
                   "mcn": [
                     "Pensamiento creativo",
-                    "Pen samiento computacional",
+                    "Pensamiento computacional",
                     "Intrapersonal",
                     "Iniciativa y orientación a la acción",
                     "Ciudadanía local, global y digital"
@@ -5464,9 +5684,7 @@
                     "Pensamiento creativo",
                     "Intrapersonal",
                     "Iniciativa y orientación a la acción",
-                    "Ciudadanía local",
-                    "global",
-                    "digital"
+                    "Ciudadanía local, global y digital"
                   ]
                 },
                 {
@@ -5474,7 +5692,7 @@
                   "texto": "Competencia cultural Adjudica valor a diferentes manifestaciones danzarias como patrimonio intangible de la huma nidad para su reconocimiento social y cultural como herencia nacional e internacional. Demuestra habilidades para apreciar manifestaciones culturales y artísticas que forman parte del patrimonio cultural de los pueblos para contribuir a su conservación. Reconoce un repertorio básico de rondas infantiles y sencillas danzas, para su desarrollo y vin culación con el folclore y el cancionero infantil tradicional. Desarrolla estrategias para utilizar los diferentes lenguajes danzarios al servicio de la expresión artística. Desarrolla conocimientos y habilidades que le permitan apreciar, respetar y adaptarse a las diferencias en normas, valores y comportamientos culturales. Ejes temáticos: Interés, autonomía y participación, ciudadanía cultural",
                   "mcn": [
                     "Comunicación",
-                    "Relacionamien to con otros",
+                    "Relación con otros",
                     "Pensamiento creativo",
                     "Pensamiento científico",
                     "Ciudadanía local, global y digital"
@@ -5485,7 +5703,7 @@
                   "texto": "Competencia de la práctica corporal colectiva Busca y propone estrategias comunicativas interpersonales con sus pares a través de la acción poética corporal. Desarrolla hábitos de escucha y cuidado del cuerpo propio y del otro en un ámbito de confian za y acuerdos colectivos que habilitan y promueven la creación y expresión a través del movi miento poético del cuerpo desde lo global y segmentario. Ejes temáticos: Comunicación, creatividad, construcción cultural colectiva",
                   "mcn": [
                     "Comunicación",
-                    "Relaciona miento con otros",
+                    "Relación con otros",
                     "Pensamiento científico",
                     "Ciudadanía local, global y digital"
                   ]
@@ -5500,27 +5718,67 @@
                 {
                   "codigo": "CE1",
                   "texto": "Competencia sensoperceptiva Desarrolla y establece conexiones que favorecen una mayor autoconciencia corporal al reco nocer su respiración, peso, partes blandas y duras, grandes estructuras (piel, músculos, hue sos), generando un vínculo de confianza consigo mismo para conocer su cuerpo. Se vincula y reconoce su entorno a través de habilidades perceptivas que le permiten identificar aspectos vinculados al cuerpo en una permanente relación entre la expresión, comunicación y creatividad; formula preguntas desde sus intereses y experiencias para conocer el mundo. Evoca imágenes, las nombra, expresa y representa corporalmente desarrollando procesos de creatividad e interacción con los objetos, para el desarrollo de su sensibilidad. Desarrolla su sentido rítmico reproduciendo y generando movimientos dados y creados, vivencian do la interacción motora y auditiva del cuerpo para contribuir con su proceso de musicalización. Explora, experimenta y desarrolla la sensibilidad mediante creaciones corporales en escena rios lúdicos, contemporáneos y tradicionales, para favorecer la creación artística, metafórica, simbólica. Resuelve situaciones en el espacio desde el movimiento poético mediatizado por las tecnologías digitales para transformar el entorno y diseñar producciones artísticas individuales y grupales. Ejes temáticos: Percepción sensorial, interrelación del mundo interno y externo, pensamiento corporal Contribuye al desarrollo de la competencia general del MCN: Comunicación, Pensamiento creativo, Pensamiento científico, Pensamiento computacional, Metacognitiva, Intrapersonal, Relación con otros",
-                  "mcn": []
+                  "mcn": [
+                    "Comunicación",
+                    "Pensamiento creativo",
+                    "Pensamiento científico",
+                    "Pensamiento computacional",
+                    "Metacognitiva",
+                    "Intrapersonal",
+                    "Relación con otros"
+                  ]
                 },
                 {
                   "codigo": "CE2",
                   "texto": "Competencia interpretativa Interpreta melodías, canciones, estructuras poéticas, narrativas y visuales para expresar y desa rrollar creativamente su propia danza. Expresa, a través del movimiento corporal, sentimientos, emociones e ideas para avanzar en el proceso de subjetivación. Explora, comienza a reflexionar y analiza en la búsqueda de la propia danza para construir pro cesos multidisciplinarios y artísticos desde el juego corporal. Identifica y cuestiona las posibilidades del espacio modificándolo con y sin materiales para avanzar hacia la comprensión del hecho estético. Ejes temáticos: Expresión, comunicación, creación, estética Contribuye al desarrollo de la competencia general del MCN: Comunicación, Pensamiento creativo, Pensamiento crítico, Metacognitiva, Intrapersonal, Relación con otros",
-                  "mcn": []
+                  "mcn": [
+                    "Comunicación",
+                    "Pensamiento creativo",
+                    "Pensamiento crítico",
+                    "Metacognitiva",
+                    "Intrapersonal",
+                    "Relación con otros"
+                  ]
                 },
                 {
                   "codigo": "CE3",
                   "texto": "Competencia productivo-creativa Experimenta y examina las posibilidades expresivas y creativas de su cuerpo para desarrollar un movimiento poético. Identifica y selecciona materiales en interacción con el espacio y sus posibilidades para expre sar, representar y componer corporalmente. Explora e integra desde el juego y diseño corporal para ampliar sus percepciones y participar de manera sensible. Realiza gestos y movimientos originales, bailando solo y con otros, para evidenciar sus conoci mientos, imaginación e inventiva. Crea y representa corporalmente juego y estímulos sensoperceptivos para constituirse como espectador activo. Improvisa e interpreta corporalmente obras plásticas, musicales y literarias, vivenciando con la propia danza, producciones culturales y patrimoniales en los diferentes lenguajes artísticos para su desarrollo integral. Ejes temáticos: Pensamiento divergente, dominio de los elementos formales, criterio estético Contribuye al desarrollo de la competencia general del MCN: Pensamiento creativo, Iniciativa y orientación a la acción, Intrapersonal",
-                  "mcn": []
+                  "mcn": [
+                    "Pensamiento creativo",
+                    "Iniciativa y orientación a la acción",
+                    "Intrapersonal"
+                  ]
                 },
                 {
                   "codigo": "CE4",
                   "texto": "Competencia cultural Reconoce y valora la danza como patrimonio intangible de la humanidad para relacionarlo con el cuerpo de saberes específicos de la disciplina. Aprecia y transfiere desde la corporeidad una obra de arte con apoyo multimedial a partir de una sensibilidad estética para expresar diferentes formas de pensar y de sentir desde la con temporaneidad. Indaga e incorpora un repertorio de obras procedentes de diferentes artistas desde la evocación de imágenes y su corporización singular, para identificarla como seña de identidad cultural. Ejes temáticos: Interés, autonomía y participación, ciudadanía cultural Contribuye al desarrollo de la competencia general del MCN: Comunicación, Pensamiento creativo, Pensamiento crítico, Pensamiento científico, Pensamiento computacional, Metacog nitiva, Intrapersonal, Iniciativa y orientación a la acción, Relación con otros, Ciudadanía local, global y digital",
-                  "mcn": []
+                  "mcn": [
+                    "Comunicación",
+                    "Pensamiento creativo",
+                    "Pensamiento crítico",
+                    "Pensamiento científico",
+                    "Pensamiento computacional",
+                    "Metacognitiva",
+                    "Intrapersonal",
+                    "Iniciativa y orientación a la acción",
+                    "Relación con otros",
+                    "Ciudadanía local, global y digital"
+                  ]
                 },
                 {
                   "codigo": "CE5",
                   "texto": "Competencia de la práctica corporal colectiva Establece vínculos y se relaciona afectivamente con sus pares a través de la acción poética corporal, para desarrollar habilidades comunicativas interpersonales en entornos presenciales y virtuales. Genera acuerdos colectivos en un ámbito de confianza para cuidar el cuerpo propio y el de sus pares a través de hábitos y normas de convivencia. Reconoce a sus pares afectivamente desde la experiencia corporal para aportar sensiblemente a la construcción de su identidad y a la del grupo de pertenencia. Elabora prácticas corporales desde una perspectiva de responsabilidad, autocuidado y cuida do para ayudar al autoconocimiento. Ejes temáticos: Comunicación, creatividad, construcción cultural colectiva Contribuye al desarrollo de la competencia general del MCN: Comunicación, Pensamiento creativo, Pensamiento crítico, Pensamiento computacional, Metacognitiva, Intrapersonal, Ini ciativa y orientación a la acción, Relación con otros, Ciudadanía local, global y digital",
-                  "mcn": []
+                  "mcn": [
+                    "Comunicación",
+                    "Pensamiento creativo",
+                    "Pensamiento crítico",
+                    "Pensamiento computacional",
+                    "Metacognitiva",
+                    "Intrapersonal",
+                    "Iniciativa y orientación a la acción",
+                    "Relación con otros",
+                    "Ciudadanía local, global y digital"
+                  ]
                 }
               ],
               "contenidos": {},
@@ -5543,7 +5801,7 @@
                     "Pensamiento crítico",
                     "Metacognitiva",
                     "Intrapersonal",
-                    "Relaciona miento con los otros",
+                    "Relación con otros",
                     "Iniciativa y orientación a la acción"
                   ]
                 },
@@ -5555,7 +5813,7 @@
                     "Pensamiento creativo",
                     "Pensamiento crítico",
                     "Metacognitiva",
-                    "Pensamiento com putacional"
+                    "Pensamiento computacional"
                   ]
                 },
                 {
@@ -5566,7 +5824,7 @@
                     "Pensamiento creativo",
                     "Pensamiento crítico",
                     "Metacognitiva",
-                    "Relacionamiento con los otros",
+                    "Relación con otros",
                     "Iniciativa y orientación a la acción"
                   ]
                 },
@@ -5578,11 +5836,9 @@
                     "Pensamiento creativo",
                     "Pensamiento científico",
                     "Metacognitiva",
-                    "Intraperso nal",
+                    "Intrapersonal",
                     "Iniciativa y orientación a la acción",
-                    "Ciudadanía local-global-digital. Contenidos",
-                    "criterios de logro y su contribución al desarrollo de las competencias específicas de la unidad curricular Los vínculos que se detallan en la siguiente tabla entre las competencias",
-                    "los contenidos y los criterios de logro responden a una jerarquización sin ser excluyentes. Competencias específicas relacionadas"
+                    "Ciudadanía local, global y digital"
                   ]
                 }
               ],
@@ -5611,7 +5867,7 @@
                   "mcn": [
                     "Comunicación",
                     "Iniciativa y orientación a la acción",
-                    "Relación con los otros",
+                    "Relación con otros",
                     "Ciudadanía local, global y digital",
                     "Metacognitiva"
                   ]
@@ -5621,8 +5877,8 @@
                   "texto": "Reconoce de forma progresiva algunas características comunicativas que aportan las tec nologías para crear e interactuar, de forma individual o colectiva",
                   "mcn": [
                     "Comunicación",
-                    "Relación con los otros",
-                    "Pensamiento críti co",
+                    "Relación con otros",
+                    "Pensamiento crítico",
                     "Ciudadanía local, global y digital",
                     "Metacognitiva"
                   ]
@@ -5640,7 +5896,13 @@
                 {
                   "codigo": "CE5",
                   "texto": "Explora, de forma colaborativa, problemas computacionales simples, siguiendo secuen cias, en situaciones lúdicas y cotidianas, para dar respuestas a interrogantes planteadas. Con tribuye al desarrollo de las competencias generales del MCN: Pensamiento crítico, Pensamien to computacional, Metacognitiva, Iniciativa y orientación a la acción, Relación con los otros",
-                  "mcn": []
+                  "mcn": [
+                    "Pensamiento crítico",
+                    "Pensamiento computacional",
+                    "Metacognitiva",
+                    "Iniciativa y orientación a la acción",
+                    "Relación con otros"
+                  ]
                 },
                 {
                   "codigo": "CE6",
@@ -5655,7 +5917,7 @@
                   "texto": "Crea narrativas combinando distintos lenguajes y medios digitales para elaborar produc ciones, en un contexto lúdico",
                   "mcn": [
                     "Comunicación",
-                    "Relación con los otros",
+                    "Relación con otros",
                     "Pensamiento creativo",
                     "Pensamiento computacional"
                   ]
@@ -5675,7 +5937,7 @@
                   "texto": "Identifica y aplica gradualmente criterios de protección de información personal en in ternet para tomar conciencia de los riesgos que se producen en las comunicaciones virtuales",
                   "mcn": [
                     "Ciudadanía local, global y digital",
-                    "Relación con los otros",
+                    "Relación con otros",
                     "Pensamiento crítico",
                     "Intrapersonal",
                     "Metacognitiva"
@@ -5706,7 +5968,7 @@
                     "Pensamiento científico",
                     "Pensamiento computacional",
                     "Metacognitiva",
-                    "Relación con los otros",
+                    "Relación con otros",
                     "Ciudadanía local, global y digital",
                     "Pensamiento crítico",
                     "Iniciativa y orientación a la acción"
@@ -5720,7 +5982,7 @@
                     "Pensamiento científico",
                     "Pensamiento computacional",
                     "Metacognitiva",
-                    "Relación con los otros",
+                    "Relación con otros",
                     "Pensamiento crítico",
                     "Iniciativa y orientación a la acción",
                     "Comunicación",
@@ -5734,7 +5996,7 @@
                     "Pensamiento científico",
                     "Pensamiento computacional",
                     "Metacognitiva",
-                    "Relación con los otros",
+                    "Relación con otros",
                     "Ciudadanía local, global y digital",
                     "Pensamiento crítico",
                     "Iniciativa y orientación a la acción",
@@ -5748,7 +6010,7 @@
                     "Metacognitiva",
                     "Comunicación",
                     "Pensamiento científico",
-                    "Pen samiento computacional",
+                    "Pensamiento computacional",
                     "Pensamiento crítico",
                     "Pensamiento creativo",
                     "Iniciativa y orientación a la acción",
@@ -5758,7 +6020,15 @@
                 {
                   "codigo": "CE5",
                   "texto": "Reflexiona sobre el error en su producción matemática como una oportunidad para in ternalizar variados procesos de aprendizaje. Contribuye al desarrollo de las competencias ge nerales del MCN: Metacognitiva, Comunicación, Pensamiento computacional, Relación con los otros, Ciudadanía local, global y digital, Pensamiento crítico, Iniciativa y orientación a la acción e intrapersonal",
-                  "mcn": []
+                  "mcn": [
+                    "Metacognitiva",
+                    "Comunicación",
+                    "Pensamiento computacional",
+                    "Relación con otros",
+                    "Ciudadanía local, global y digital",
+                    "Pensamiento crítico",
+                    "Iniciativa y orientación a la acción"
+                  ]
                 },
                 {
                   "codigo": "CE6",
@@ -5767,9 +6037,9 @@
                     "Ciudadanía local, global y digital",
                     "Pensamiento crítico",
                     "Comunicación",
-                    "Pen samiento científico",
+                    "Pensamiento científico",
                     "Metacognitiva",
-                    "Relación con los otros",
+                    "Relación con otros",
                     "Iniciativa y orientación a la acción"
                   ]
                 },
@@ -5780,9 +6050,8 @@
                     "Comunicación",
                     "Pensamiento científico",
                     "Metacognitiva",
-                    "Relación con los otros",
-                    "Ciudadanía local",
-                    "glo bal y digital",
+                    "Relación con otros",
+                    "Ciudadanía local, global y digital",
                     "Pensamiento crítico",
                     "Iniciativa y orientación a la acción",
                     "Pensamiento creativo",
@@ -6237,7 +6506,8 @@
                   "texto": "Interpreta los sistemas materiales y sus transformaciones, construyendo tablas sencillas y realizando estudios que impliquen dos o más variables, con la finalidad de argumentar sobre temas de estudio e intercambiar posturas, adecuándolas al contexto",
                   "mcn": [
                     "Comunicación",
-                    "Pensamiento científico. Pensamiento crítico"
+                    "Pensamiento científico",
+                    "Pensamiento crítico"
                   ]
                 },
                 {
@@ -6246,14 +6516,20 @@
                   "mcn": [
                     "Comunicación",
                     "Pensamiento científico",
-                    "Pensamiento crítico. Pensamiento creativo",
+                    "Pensamiento crítico",
+                    "Pensamiento creativo",
                     "Iniciativa y orientación a la acción"
                   ]
                 },
                 {
                   "codigo": "CE3",
                   "texto": "Propone situaciones acerca de los sistemas materiales y sus transformaciones que le pre senten desafíos y las explora de forma colectiva buscando relaciones no aparentes entre los aspectos que las definen, para justificar la toma de decisiones utilizando la planificación y la autoevaluación como herramientas para el aprendizaje. Contribuye al desarrollo de las com petencias generales del MCN: Pensamiento crítico, Metacognitiva, Relación con otros, Iniciativa y orientación a la acción",
-                  "mcn": []
+                  "mcn": [
+                    "Pensamiento crítico",
+                    "Metacognitiva",
+                    "Relación con otros",
+                    "Iniciativa y orientación a la acción"
+                  ]
                 },
                 {
                   "codigo": "CE4",
@@ -6261,7 +6537,7 @@
                   "mcn": [
                     "Intrapersonal",
                     "Pensamiento creativo",
-                    "Pen samiento científico",
+                    "Pensamiento científico",
                     "Pensamiento crítico",
                     "Pensamiento computacional",
                     "Iniciativa y orientación a la acción"
@@ -6271,7 +6547,8 @@
                   "codigo": "CE5",
                   "texto": "Relaciona aplicaciones tecnológicas con el conocimiento científico y reflexiona sobre su influencia en la sociedad y el ambiente reconociendo su carácter temporal; y utiliza medios digitales para producir colaborativamente, presentando la información en formatos adecua dos",
                   "mcn": [
-                    "Pensamiento científico. Ciudadanía local-global-digital"
+                    "Pensamiento científico",
+                    "Ciudadanía local, global y digital"
                   ]
                 }
               ],
@@ -6634,7 +6911,8 @@
                   "codigo": "CE2",
                   "texto": "Reflexiona, planifica y expone estrategias de resolución de forma colaborativa para antici par resultados posibles en problemas socioambientales, causas, consecuencias y la incidencia de la acción humana",
                   "mcn": [
-                    "Co municativa. Pensamiento creativo",
+                    "Comunicación",
+                    "Pensamiento creativo",
                     "Pensamiento crítico",
                     "Pensamiento científico",
                     "Metacognitiva",
@@ -6655,8 +6933,9 @@
                   "codigo": "CE4",
                   "texto": "Internaliza con mediación y explica las etapas en diferentes procesos naturales de su en torno sin mediación, demostrando mayor autonomía para responder a situaciones cotidianas o de su entorno cultural",
                   "mcn": [
-                    "Pen samiento computacional",
-                    "Intrapersonal Iniciativa y orientación a la acción. Relación con otros"
+                    "Pensamiento computacional",
+                    "Iniciativa y orientación a la acción",
+                    "Relación con otros"
                   ]
                 },
                 {
@@ -6672,14 +6951,20 @@
                 {
                   "codigo": "CE6",
                   "texto": "Reflexiona valorando el error como parte del proceso de construcción de soluciones para dar respuesta a problemas de la vida cotidiana y del ambiente, pudiendo utilizar medios digita les. Contribuye al desarrollo de las competencias generales MCN: Pensamiento científico, Pen samiento computacional, Iniciativa y orientación a la acción, Interpersonal, Ciudadanía local, global y digital y Relación con los otros",
-                  "mcn": []
+                  "mcn": [
+                    "Pensamiento científico",
+                    "Pensamiento computacional",
+                    "Iniciativa y orientación a la acción",
+                    "Intrapersonal",
+                    "Ciudadanía local, global y digital"
+                  ]
                 },
                 {
                   "codigo": "CE7",
                   "texto": "Analiza sus actitudes y la de los demás, para reconocer y comprender las reacciones, sen timientos y actitudes propias, y de los demás para el cuidado de sí y del entorno, participando con autonomía de forma colaborativa o cooperativa en la resolución de conflictos",
                   "mcn": [
                     "Intrapersonal",
-                    "Relación con los otros"
+                    "Relación con otros"
                   ]
                 }
               ],
@@ -7590,7 +7875,17 @@
                 {
                   "codigo": "CE1",
                   "texto": "Incorpora y emplea el uso del vocabulario específico contribuyendo al pensamiento cien tífico para entender el Sistema Solar y el Universo. Contribuye al desarrollo de las competen cias generales del MCN: Comunicación, Pensamiento científico, Pensamiento computacional, Metacognitiva, Iniciativa y orientación a la acción, Pensamiento creativo, Relación con otros, Intrapersonal, Ciudadanía local, global y digital",
-                  "mcn": []
+                  "mcn": [
+                    "Comunicación",
+                    "Pensamiento científico",
+                    "Pensamiento computacional",
+                    "Metacognitiva",
+                    "Iniciativa y orientación a la acción",
+                    "Pensamiento creativo",
+                    "Relación con otros",
+                    "Intrapersonal",
+                    "Ciudadanía local, global y digital"
+                  ]
                 },
                 {
                   "codigo": "CE2",
@@ -7617,7 +7912,7 @@
                     "Pensamiento computacional",
                     "Metacognitiva",
                     "Iniciativa y orientación a la acción",
-                    "Pen samiento creativo",
+                    "Pensamiento creativo",
                     "Relación con otros",
                     "Intrapersonal",
                     "Ciudadanía local, global y digital"
@@ -7630,7 +7925,7 @@
                     "Comunicación",
                     "Pensamiento crítico",
                     "Pensamiento científico",
-                    "Pensamiento computa cional",
+                    "Pensamiento computacional",
                     "Metacognitiva",
                     "Iniciativa y orientación a la acción",
                     "Pensamiento creativo",
@@ -7641,7 +7936,18 @@
                 {
                   "codigo": "CE5",
                   "texto": "Indaga, reconoce, valora, reflexiona y comunica sobre los procesos geológicos para la toma de conciencia de los riesgos y vulnerabilidades de los territorios. Contribuye al desarro llo de las competencias generales del MCN: Comunicación, Pensamiento crítico, Pensamiento científico, Pensamiento computacional, Metacognitiva, Iniciativa y orientación a la acción, Pen samiento creativo, Relación con otros, Intrapersonal, Ciudadanía local, global y digital. Contenidos, criterios de logro y su contribución al desarrollo de las competencias específicas Los vínculos que se detallan en la siguiente tabla entre las competencias, los contenidos y los criterios de logro responden a una jerarquización sin ser excluyentes. Competencias específicas relacionadas",
-                  "mcn": []
+                  "mcn": [
+                    "Comunicación",
+                    "Pensamiento crítico",
+                    "Pensamiento científico",
+                    "Pensamiento computacional",
+                    "Metacognitiva",
+                    "Iniciativa y orientación a la acción",
+                    "Pensamiento creativo",
+                    "Relación con otros",
+                    "Intrapersonal",
+                    "Ciudadanía local, global y digital"
+                  ]
                 }
               ],
               "contenidos": {},
@@ -7658,7 +7964,11 @@
                 {
                   "codigo": "CE1",
                   "texto": "Narra, expone, describe, argumenta, explica, dialoga a través de la incorporación de voca bulario específico para organizar su discurso con adecuación al contexto. Contribuye al desa rrollo de las competencias generales del MCN: Comunicación, Metacognitiva, Relacionamiento con otros",
-                  "mcn": []
+                  "mcn": [
+                    "Comunicación",
+                    "Metacognitiva",
+                    "Relación con otros"
+                  ]
                 },
                 {
                   "codigo": "CE2",
@@ -7666,15 +7976,19 @@
                   "mcn": [
                     "Comunicación",
                     "Pensamiento creativo",
-                    "Ini ciativa y orientación a la acción",
-                    "Relacionamiento con otros",
+                    "Iniciativa y orientación a la acción",
+                    "Relación con otros",
                     "Intrapersonal"
                   ]
                 },
                 {
                   "codigo": "CE3",
                   "texto": "Indaga sobre significados diversos y desconocidos, formula preguntas, dialoga y justifica sus razones para construir puntos de vista. Contribuye al desarrollo de las competencias gene rales del MCN: Comunicación, Pensamiento crítico, Relacionamiento con otros",
-                  "mcn": []
+                  "mcn": [
+                    "Comunicación",
+                    "Pensamiento crítico",
+                    "Relación con otros"
+                  ]
                 },
                 {
                   "codigo": "CE4",
@@ -7683,7 +7997,7 @@
                     "Comunicación",
                     "Pensamiento científico",
                     "Pensamiento crítico",
-                    "Relacionamiento con otros"
+                    "Relación con otros"
                   ]
                 },
                 {
@@ -7711,20 +8025,25 @@
                     "Comunicación",
                     "Intrapersonal",
                     "Pensamiento creativo",
-                    "Relacionamiento con otros"
+                    "Relación con otros"
                   ]
                 },
                 {
                   "codigo": "CE8",
                   "texto": "Identifica desafíos, manifiesta sus inquietudes, busca estrategias y diseña planes de ac ción para resolver situaciones individuales y colectivas. Contribuye al desarrollo de las com petencias generales del MCN: Comunicación, Iniciativa y orientación a la acción, Pensamiento crítico, Pensamiento computacional",
-                  "mcn": []
+                  "mcn": [
+                    "Comunicación",
+                    "Iniciativa y orientación a la acción",
+                    "Pensamiento crítico",
+                    "Pensamiento computacional"
+                  ]
                 },
                 {
                   "codigo": "CE9",
                   "texto": "Desarrolla sus estrategias comunicativas y el respeto a la diversidad para mejorar sus ha bilidades sociales, intercambiar experiencias, atender y entender a los otros en los diferentes ámbitos de convivencia",
                   "mcn": [
-                    "Co municación",
-                    "Relacionamiento con otros",
+                    "Comunicación",
+                    "Relación con otros",
                     "Intrapersonal",
                     "Ciudadanía local, global y digital"
                   ]
@@ -8732,7 +9051,9 @@
                 {
                   "codigo": "CE3.2",
                   "texto": "Expresa razones basadas en la estructura argumentativa para generar debate. Contribu ye al desarrollo de las competencias generales del MCN: Pensamiento crítico",
-                  "mcn": []
+                  "mcn": [
+                    "Pensamiento crítico"
+                  ]
                 },
                 {
                   "codigo": "CE3.3",
@@ -9216,37 +9537,71 @@
                 {
                   "codigo": "CE1",
                   "texto": "Elabora argumentos y contraargumentos sobre relatos y testimonios historiográficos par ticipando en debates con la guía del docente para integrar vocabulario histórico. Contribuye a las competencias generales del MCN: Comunicación, Pensamiento crítico, Metacognitiva",
-                  "mcn": []
+                  "mcn": [
+                    "Comunicación",
+                    "Pensamiento crítico",
+                    "Metacognitiva"
+                  ]
                 },
                 {
                   "codigo": "CE2",
                   "texto": "Construye explicaciones elaboradas formulando interrogantes sobre las acciones de los sujetos sociales y los procesos históricos para ampliar sus conocimientos. Contribuye a las competencias generales del MCN: Comunicación, Pensamiento crítico, Metacognitiva",
-                  "mcn": []
+                  "mcn": [
+                    "Comunicación",
+                    "Pensamiento crítico",
+                    "Metacognitiva"
+                  ]
                 },
                 {
                   "codigo": "CE3",
                   "texto": "Construye e interpreta las fuentes históricas o materiales reconociendo las múltiples sen sibilidades y puntos de vista para incorporar estrategias de abordaje propias de la investiga ción histórica. Contribuye a las competencias generales del MCN: Comunicación, Pensamiento crítico, Ciudadanía local, global y digital",
-                  "mcn": []
+                  "mcn": [
+                    "Comunicación",
+                    "Pensamiento crítico",
+                    "Ciudadanía local, global y digital"
+                  ]
                 },
                 {
                   "codigo": "CE4",
                   "texto": "Planifica con la guía del docente proyectos de indagación sobre temáticas contextualiza das para vincularlas a problemas históricos. Contribuye a las competencias generales del MCN: Ciudadanía local, global y digital, Comunicación, Pensamiento crítico, Pensamiento creativo, Relacionamiento con otros, Metacognitiva, Intrapersonal, Iniciativa y orientación a la acción",
-                  "mcn": []
+                  "mcn": [
+                    "Ciudadanía local, global y digital",
+                    "Comunicación",
+                    "Pensamiento crítico",
+                    "Pensamiento creativo",
+                    "Relación con otros",
+                    "Metacognitiva",
+                    "Intrapersonal",
+                    "Iniciativa y orientación a la acción"
+                  ]
                 },
                 {
                   "codigo": "CE5",
                   "texto": "Selecciona y relaciona con mediación del docente herramientas digitales para interpre tar y organizar información de carácter histórico. Contribuye a las competencias generales del MCN: Pensamiento computacional, Pensamiento científico y Pensamiento crítico",
-                  "mcn": []
+                  "mcn": [
+                    "Pensamiento computacional",
+                    "Pensamiento crítico"
+                  ]
                 },
                 {
                   "codigo": "CE6",
                   "texto": "Elabora escrituras pertinentes a las temáticas abordadas con base en las fuentes para ilustrar distintos contextos históricos. Contribuye a las competencias generales del MCN: Co municación, Pensamiento crítico, Pensamiento creativo, Intrapersonal, Relacionamiento con los otros",
-                  "mcn": []
+                  "mcn": [
+                    "Comunicación",
+                    "Pensamiento crítico",
+                    "Pensamiento creativo",
+                    "Intrapersonal",
+                    "Relación con otros"
+                  ]
                 },
                 {
                   "codigo": "CE7",
                   "texto": "Reconoce a partir del estudio de casos concretos en el aula de historia el valor de la con vivencia democrática como garantía de los derechos de las sociedades. Contribuye a las com petencias generales del MCN: Pensamiento crítico, Ciudadanía local, global y digital, Relacio namiento con los otros",
-                  "mcn": []
+                  "mcn": [
+                    "Pensamiento crítico",
+                    "Ciudadanía local, global y digital",
+                    "Relación con otros"
+                  ]
                 }
               ],
               "contenidos": {
@@ -9750,7 +10105,7 @@
                   "texto": "Define y explica conceptos relacionados a temáticas sociales, a partir del intercambio con sus pares, para vincularse en diferentes contextos cotidianos",
                   "mcn": [
                     "Comunicación",
-                    "Relación con los otros",
+                    "Relación con otros",
                     "Ciudadanía local, global y digital"
                   ]
                 },
@@ -9758,7 +10113,7 @@
                   "codigo": "CE2",
                   "texto": "Identifica y expone de manera crítica las problemáticas de su comunidad, buscando con cientizar y dar a conocer la implicancia de vivir en el marco de los derechos humanos, para su defensa",
                   "mcn": [
-                    "Pensamiento creati vo",
+                    "Pensamiento creativo",
                     "Pensamiento crítico"
                   ]
                 },
@@ -9781,7 +10136,10 @@
                 {
                   "codigo": "CE5",
                   "texto": "Toma conciencia de su corporalidad y de sus fortalezas y debilidades para resolver aque llos conflictos donde interviene la violencia, y así tomar decisiones en consecuencia. Contribu ye al desarrollo de las competencias generales del MCN: Intrapersonal, Metacognitiva",
-                  "mcn": []
+                  "mcn": [
+                    "Intrapersonal",
+                    "Metacognitiva"
+                  ]
                 },
                 {
                   "codigo": "CE6",
@@ -9795,18 +10153,24 @@
                 {
                   "codigo": "CE7",
                   "texto": "Planifica y organiza acciones que le permiten interactuar e incidir en el entorno que lo rodea para la construcción de una ciudadanía activa. Contribuye al desarrollo de las compe tencias generales del MCN: Iniciativa y orientación a la acción, Ciudadanía local, global y digital",
-                  "mcn": []
+                  "mcn": [
+                    "Iniciativa y orientación a la acción",
+                    "Ciudadanía local, global y digital"
+                  ]
                 },
                 {
                   "codigo": "CE8",
                   "texto": "Reconoce el respeto por el vínculo con el otro teniendo en cuenta los derechos y las res ponsabilidades para una convivencia democrática. Contribuye al desarrollo de las competen cias generales del MCN: Relación con los otros, Ciudadanía local, global y digital",
-                  "mcn": []
+                  "mcn": [
+                    "Relación con otros",
+                    "Ciudadanía local, global y digital"
+                  ]
                 },
                 {
                   "codigo": "CE9",
                   "texto": "Identifica derechos y responsabilidades y reconoce su implicancia para la vida democrá tica",
                   "mcn": [
-                    "Relación con los otros",
+                    "Relación con otros",
                     "Ciudadanía local, global y digital"
                   ]
                 },
@@ -9816,7 +10180,7 @@
                   "mcn": [
                     "Iniciativa y orientación a la acción",
                     "Pensamiento crítico",
-                    "Relación con los otros",
+                    "Relación con otros",
                     "Ciudadanía local, global y digital"
                   ]
                 },
@@ -9827,21 +10191,23 @@
                     "Ciudadanía local, global y digital",
                     "Pensamiento crítico",
                     "Pensamiento computacional",
-                    "Relación con los otros"
+                    "Relación con otros"
                   ]
                 },
                 {
                   "codigo": "CE12",
                   "texto": "Participa en espacios digitales de intercambio y producción, para generar diferentes for matos que sean accesibles y equitativos. Contribuye al desarrollo de las competencias genera les del MCN: Ciudadanía local, global y digital",
-                  "mcn": []
+                  "mcn": [
+                    "Ciudadanía local, global y digital"
+                  ]
                 },
                 {
                   "codigo": "CE13",
                   "texto": "Respeta derechos y asume responsabilidades proponiendo instancias de toma de de cisiones democráticas en su entorno",
                   "mcn": [
-                    "Relación con los otros",
+                    "Relación con otros",
                     "Iniciativa y orientación a la acción",
-                    "Ciudadanía local global y digital",
+                    "Ciudadanía local, global y digital",
                     "Pensamiento crítico"
                   ]
                 }
@@ -10089,7 +10455,7 @@
                     "Ciudadanía local, global y digital",
                     "Pensamiento científico",
                     "Pensamiento crítico",
-                    "Pen samiento creativo",
+                    "Pensamiento creativo",
                     "Pensamiento computacional",
                     "Metacognitiva"
                   ]
@@ -10097,17 +10463,48 @@
                 {
                   "codigo": "CE4",
                   "texto": "Representa, explica y propone respuestas a los desafíos sobre las características de los diferentes territorios para comprender su dinámica. Contribuye al desarrollo de las competen cias generales del MCN: Pensamiento científico, Ciudadanía local, global y digital, Intraperso nal, Relación con otros, Metacognitiva, Pensamiento creativo, Pensamiento computacional, Iniciativa y orientación a la acción, Comunicación, Pensamiento crítico",
-                  "mcn": []
+                  "mcn": [
+                    "Pensamiento científico",
+                    "Ciudadanía local, global y digital",
+                    "Intrapersonal",
+                    "Relación con otros",
+                    "Metacognitiva",
+                    "Pensamiento creativo",
+                    "Pensamiento computacional",
+                    "Iniciativa y orientación a la acción",
+                    "Comunicación",
+                    "Pensamiento crítico"
+                  ]
                 },
                 {
                   "codigo": "CE5",
                   "texto": "Reconoce y argumenta sobre los problemas y oportunidades socioambientales y busca sus causas y consecuencias con la combinación de ideas propias y de otras personas. Contribu ye al desarrollo de las competencias generales del MCN: Comunicación, Iniciativa y orientación a la acción, Pensamiento científico, Pensamiento crítico, Pensamiento creativo, Metacognitiva, Ciudadanía Local y digital, Relación con otros, Pensamiento computacional",
-                  "mcn": []
+                  "mcn": [
+                    "Comunicación",
+                    "Iniciativa y orientación a la acción",
+                    "Pensamiento científico",
+                    "Pensamiento crítico",
+                    "Pensamiento creativo",
+                    "Metacognitiva",
+                    "Ciudadanía local, global y digital",
+                    "Relación con otros",
+                    "Pensamiento computacional"
+                  ]
                 },
                 {
                   "codigo": "CE6",
                   "texto": "Indaga, identifica y reflexiona sobre la influencia del uso y acceso de las tecnologías, con mediación para reconocer su impacto socioambiental. Contribuye al desarrollo de las compe tencias generales del MCN: Comunicación, Pensamiento computacional, Pensamiento científi co, Ciudadanía local, global y digital, Pensamiento creativo, Iniciativa y orientación a la acción, Pensamiento crítico, Metacognitiva, Relación con otros",
-                  "mcn": []
+                  "mcn": [
+                    "Comunicación",
+                    "Pensamiento computacional",
+                    "Pensamiento científico",
+                    "Ciudadanía local, global y digital",
+                    "Pensamiento creativo",
+                    "Iniciativa y orientación a la acción",
+                    "Pensamiento crítico",
+                    "Metacognitiva",
+                    "Relación con otros"
+                  ]
                 },
                 {
                   "codigo": "CE7",
@@ -10554,14 +10951,14 @@
                   "codigo": "CE2",
                   "texto": "Competencia interpretativa. Desarrolla una actitud reflexiva, relacionando diferentes ex presiones artísticas en contextos culturales y sociales, para generar opiniones argumentadas, fundamentadas",
                   "mcn": [
-                    "Pensamien to crítico"
+                    "Pensamiento crítico"
                   ]
                 },
                 {
                   "codigo": "CE3",
                   "texto": "Competencia productivo-creativa. Desarrolla y participa de la experiencia estética, agudi za la sensibilidad con el fin de producir y comprender el significado de cualquier manifestación artística propia o ajena",
                   "mcn": [
-                    "Pen samiento creativo"
+                    "Pensamiento creativo"
                   ]
                 },
                 {
@@ -10621,7 +11018,7 @@
                   "mcn": [
                     "Intrapersonal",
                     "Comunicación",
-                    "Relacionamiento con otros",
+                    "Relación con otros",
                     "Metacognitiva"
                   ]
                 },
@@ -10641,7 +11038,7 @@
                   "texto": "Competencia cultural Reconoce e identifica con autonomía manifestaciones musicales de diversas culturas y épocas y las valora con andamiaje del docente. Desarrolla criterio estético propio y colectivo ante di versas obras y hechos artísticos musicales. Identifica y relaciona de forma autónoma elemen tos formales que le permiten asociar manifestaciones musicales de diversas culturas y épocas. Reconoce y amplía su repertorio de canciones y melodías incorporando materiales que enri quecen su acervo cultural y expanden el marco de referencia de su universo musical. El desarrollo de esta competencia habilita la conformación de las bases de una ciudadanía cultural rica y diversa, impulsa procesos identitarios desde lo cognitivo y sensorial, amplía y di versifica el capital cultural del individuo y su comunidad, desarrollando valores de convivencia y comprensión de la diversidad. Ejes o dominios a desarrollar: capital cultural; interés, autonomía y participación; ciudadanía cultural",
                   "mcn": [
                     "Comunicación",
-                    "Relaciona miento con otros",
+                    "Relación con otros",
                     "Pensamiento científico",
                     "Ciudadanía local, global y digital",
                     "Metacognitiva"
@@ -10664,7 +11061,7 @@
                   "texto": "Competencia de la práctica musical colectiva Interpreta sencillas obras musicales polirrítmicas o polifónicas instrumentales y vocales. Desa rrolla sentido armónico en la interpretación colectiva. Profundiza su identidad musical comu nitaria y grupal. El desarrollo de esta competencia promueve la convivencia, la tolerancia y el disfrute colectivo de la práctica musical. Ejes o dominios a desarrollar: comunicación, diversidad, construcción cultural compartida",
                   "mcn": [
                     "Comunicación",
-                    "Relaciona miento con otros",
+                    "Relación con otros",
                     "Ciudadanía local, global y digital",
                     "Metacognitiva"
                   ]
@@ -10679,14 +11076,18 @@
                 {
                   "codigo": "CE2",
                   "texto": "Alcanza mayor autonomía en la percepción, en función de sus intereses y características, interactuando con pertinencia en la construcción del sentido simbólico del vocabulario para explorar las diversas posibilidades del lenguaje literario. Contribuye al desarrollo de las compe tencias generales del MCN: Comunicación, Metacognitiva, Pensamiento creativo",
-                  "mcn": []
+                  "mcn": [
+                    "Comunicación",
+                    "Metacognitiva",
+                    "Pensamiento creativo"
+                  ]
                 },
                 {
                   "codigo": "CE3",
                   "texto": "Vincula, de forma independiente, sus experiencias de lectura con nuevas ideas y emo ciones propias que son plasmadas en producciones escritas para el desarrollo de su criterio estético",
                   "mcn": [
                     "Comunicación",
-                    "Pen samiento creativo",
+                    "Pensamiento creativo",
                     "Pensamiento crítico",
                     "Iniciativa y orientación a la acción"
                   ]
@@ -10694,27 +11095,53 @@
                 {
                   "codigo": "CE4",
                   "texto": "Acepta y valora nuevos puntos de vista que le permitan rever su posición y reorganizar su discurso de manera creativa para construir nuevos significados e interpretaciones de forma in dividual y colectiva. Contribuye al desarrollo de la competencia general del MCN: Pensamiento crítico, Pensamiento científico, Relación con otros",
-                  "mcn": []
+                  "mcn": [
+                    "Pensamiento crítico",
+                    "Pensamiento científico",
+                    "Relación con otros"
+                  ]
                 },
                 {
                   "codigo": "CE5",
                   "texto": "Reconoce y explica con independencia las diferencias entre acciones, personajes y he chos fantásticos de realistas, para elaborar de forma oral y escrita nuevas producciones litera rias. Contribuye al desarrollo de la competencia general del MCN: Comunicación, Pensamiento crítico, Pensamiento creativo, Pensamiento computacional, Iniciativa y orientación a la acción",
-                  "mcn": []
+                  "mcn": [
+                    "Comunicación",
+                    "Pensamiento crítico",
+                    "Pensamiento creativo",
+                    "Pensamiento computacional",
+                    "Iniciativa y orientación a la acción"
+                  ]
                 },
                 {
                   "codigo": "CE6",
                   "texto": "Clasifica con autonomía el tipo de voz narrativa de un cuento e identifica la presencia de la polifonía narrativa para incluir en diversas producciones propias o colectivas. Contribuye al desarrollo de la competencia general del MCN: Comunicación, Pensamiento científico, Pensa miento creativo, Relación con otros, Iniciativa y orientación a la acción",
-                  "mcn": []
+                  "mcn": [
+                    "Comunicación",
+                    "Pensamiento científico",
+                    "Pensamiento creativo",
+                    "Relación con otros",
+                    "Iniciativa y orientación a la acción"
+                  ]
                 },
                 {
                   "codigo": "CE7",
                   "texto": "Diferencia con autonomía las obras en función de su género literario e identifica la presen cia de géneros literarios híbridos para explicar sus características. Contribuye al desarrollo de la competencia general del MCN: Comunicación, Pensamiento científico, Pensamiento crítico",
-                  "mcn": []
+                  "mcn": [
+                    "Comunicación",
+                    "Pensamiento científico",
+                    "Pensamiento crítico"
+                  ]
                 },
                 {
                   "codigo": "CE8",
                   "texto": "Amplía la capacidad de recepción y expresión de ideas y sentimientos atendiendo a de rechos y deberes mutuos para la producción escrita y oral. Contribuye al desarrollo de la com petencia general del MCN: Comunicación, Intrapersonal, Iniciativa y orientación a la acción, Relación con otros, Ciudadanía local, global y digital",
-                  "mcn": []
+                  "mcn": [
+                    "Comunicación",
+                    "Intrapersonal",
+                    "Iniciativa y orientación a la acción",
+                    "Relación con otros",
+                    "Ciudadanía local, global y digital"
+                  ]
                 }
               ],
               "contenidos": {
@@ -11053,12 +11480,24 @@
                 {
                   "codigo": "CE3",
                   "texto": "Reconoce su cuerpo, su voz y sus emociones como instrumentos de trabajo creativo y los pone en juego para crear historias y personajes. Desarrolla la autocrítica en su trabajo escénico, identificando aspectos para mejorar. Se apropia de las consignas, comprendiéndolas, cuestio nándolas y potenciándolas, y aporta ideas nuevas. Contribuye al desarrollo de las competen cias generales del MCN: Pensamiento crítico, Pensamiento creativo, Intrapersonal, Metacogni tiva, Pensamiento computacional",
-                  "mcn": []
+                  "mcn": [
+                    "Pensamiento crítico",
+                    "Pensamiento creativo",
+                    "Intrapersonal",
+                    "Metacognitiva",
+                    "Pensamiento computacional"
+                  ]
                 },
                 {
                   "codigo": "CE4",
                   "texto": "Reconoce, crea y se apropia de su canal expresivo e interpretativo. Pone en práctica lo investigado en la creación de personajes y se apropia llevándolo a escena. Desarrolla y pone en práctica la mirada reflexiva sobre su trabajo escénico. Contribuye al desarrollo de las compe tencias generales del MCN: Metacognitiva, Pensamiento creativo, Intrapersonal, Pensamiento científico, Iniciativa y orientación a la acción",
-                  "mcn": []
+                  "mcn": [
+                    "Metacognitiva",
+                    "Pensamiento creativo",
+                    "Intrapersonal",
+                    "Pensamiento científico",
+                    "Iniciativa y orientación a la acción"
+                  ]
                 },
                 {
                   "codigo": "CE5",
@@ -11081,7 +11520,7 @@
                   "texto": "Se vincula con sus pares desde la creación escénica, asumiendo el compromiso con el grupo y respetando las consignas pautadas. Potencia y fomenta la tolerancia y aceptación de todas las ideas en el trabajo en grupos. Encuentra estrategias para llegar a acuerdos en el traba jo colectivo. Vivencia el acontecimiento teatral en la presentación de una obra ante un público",
                   "mcn": [
                     "Ciudadanía local, global y digital",
-                    "Relación con los otros",
+                    "Relación con otros",
                     "Pensamiento creativo"
                   ]
                 }
@@ -11321,9 +11760,7 @@
                   "texto": "Competencia sensoperceptiva Se vincula directamente con su entorno a través de habilidades perceptivas que le permiten reconocer, discriminar e identificar autónomamente aspectos vinculados al cuerpo, el espacio, el tiempo, el movimiento, los objetos y las personas, en una permanente relación entre la ex presión, la participación y la creatividad. Reconoce imágenes, las representa y resignifica corporalmente para desarrollar procesos de creatividad e interacción con los objetos, relaciones con las personas y estímulos sensoriales. Interpreta y crea movimientos mediante su sentido rítmico para expresar emociones. Se apropia de escenarios lúdicos tradicionales y contemporáneos mediante la manifestación creativa, para expresar sentimientos y emociones. Ejes temáticos: Percepción sensorial, interrelación del mundo interno y externo, pensamiento corporal",
                   "mcn": [
                     "Intrapersonal",
-                    "Ciudadanía local",
-                    "global",
-                    "digital"
+                    "Ciudadanía local, global y digital"
                   ]
                 },
                 {
@@ -11331,9 +11768,7 @@
                   "texto": "Competencia interpretativa Interpreta melodías y canciones, sentimientos y emociones mediante la reproducción y crea ción de movimientos corporales, para expresarse. Participa y disfruta de la propia danza, juegos corporales y rondas tradicionales nacionales y universales, para interactuar con otros. Realiza coreografías, jugando y modificando el espacio, con foco en las danzas circulares, con el fin de coordinar movimientos e interactuar con otros. Reconoce y desarrolla la organización rítmica y poética en distintas danzas para expresarse. Ejes temáticos: Expresión, comunicación",
                   "mcn": [
                     "Intrapersonal",
-                    "Ciudadanía local",
-                    "global",
-                    "digital"
+                    "Ciudadanía local, global y digital"
                   ]
                 },
                 {
@@ -11341,9 +11776,7 @@
                   "texto": "Competencia productivo-creativa Analiza, investiga y crea movimientos a través del cuerpo para vivenciar y explorar diferentes espacios con o sin objetos. Reconoce, registra y crea para transmitir sentimientos y emociones mediante el juego creativo. Ejes temáticos: Pensamiento divergente dominio de los elementos formales, criterio estético",
                   "mcn": [
                     "Intrapersonal",
-                    "Ciudadanía local",
-                    "global",
-                    "digital"
+                    "Ciudadanía local, global y digital"
                   ]
                 },
                 {
@@ -11351,7 +11784,7 @@
                   "texto": "Competencia cultural Reconoce y valora diferentes manifestaciones danzarias como patrimonio intangible de la hu manidad, para resignificar aspectos culturales. Demuestra habilidades para apreciar, comprender, y valorar las manifestaciones culturales y ar tísticas que forman parte del patrimonio cultural de los pueblos y contribuir a su conservación. Reconoce y emplea un repertorio de técnicas y danzas universales, para ampliar su espectro expresivo. Discrimina y desarrolla estrategias utilizando los diferentes lenguajes danzarios al servicio de la expresión artística. Ejes temáticos: Interés, autonomía y participación, ciudadanía cultural",
                   "mcn": [
                     "Comunicación",
-                    "Relaciona miento con otros",
+                    "Relación con otros",
                     "Pensamiento científico",
                     "Ciudadanía local, global y digital"
                   ]
@@ -11361,10 +11794,10 @@
                   "texto": "Competencia de la práctica corporal colectiva Implementa y discrimina estrategias comunicativas interpersonales con sus pares, para promo ver la acción poética corporal. Incorpora hábitos de escucha y cuidado anatómico del cuerpo, en un ámbito de confianza y acuerdos colectivos que habilitan y promueven la creación y la expresión. Establece acuerdos colectivos para la higiene, el orden y la convivencia en espacios compartidos. Ejes temáticos: Comunicación, creatividad, construcción cultural colectiva",
                   "mcn": [
                     "Comunicación",
-                    "Relacionamiento con otros",
+                    "Relación con otros",
                     "Pensamiento científico",
                     "Ciudadanía local, global y digital",
-                    "Pensamiento crea tivo",
+                    "Pensamiento creativo",
                     "Pensamiento crítico",
                     "Pensamiento computacional",
                     "Metacognitiva",
@@ -11381,27 +11814,74 @@
                 {
                   "codigo": "CE1",
                   "texto": "Competencia sensoperceptiva Desarrolla y establece conexiones que favorecen una mayor autoconciencia corporal al reco nocer su respiración, peso, partes blandas y duras, grandes estructuras (piel, músculos, hue sos), generando un vínculo de confianza consigo mismo para conocer su cuerpo. Se vincula y reconoce su entorno a través de habilidades perceptivas que le permiten identificar aspectos vinculados al cuerpo en una permanente relación entre la expresión, comunicación y creatividad; formula preguntas desde sus intereses y experiencias para conocer el mundo. Evoca imágenes, las nombra, expresa y representa corporalmente desarrollando procesos de creatividad e interacción con los objetos, para el desarrollo de su sensibilidad y autorrealiza ción. Desarrolla su sentido rítmico reproduciendo y generando movimientos dados y creados, viven ciando la interacción motora y auditiva del cuerpo para contribuir con su proceso de musicali zación, sensibilización y exploración. Explora, experimenta y desarrolla la sensibilidad mediante creaciones corporales en escena rios lúdicos, contemporáneos y tradicionales, para favorecer la creación artística, metafórica, simbólica en la construcción de conceptos. Resuelve situaciones en el espacio desde el movimiento poético mediatizado por las tecnolo gías digitales para transformar el entorno y diseñar producciones artísticas. Ejes temáticos: Percepción sensorial, interrelación del mundo interno y externo, pensamiento corporal Contribuye al desarrollo de la competencia general del MCN: Comunicación, Pensamiento creativo, Pensamiento científico, Pensamiento computacional, Metacognitiva, Intrapersonal, Relación con otros",
-                  "mcn": []
+                  "mcn": [
+                    "Comunicación",
+                    "Pensamiento creativo",
+                    "Pensamiento científico",
+                    "Pensamiento computacional",
+                    "Metacognitiva",
+                    "Intrapersonal",
+                    "Relación con otros"
+                  ]
                 },
                 {
                   "codigo": "CE2",
                   "texto": "Competencia interpretativa Elige e interpreta melodías, canciones, estructuras poéticas, narrativas y visuales para expresar y desarrollar creativamente su propia danza. Expresa a través del movimiento corporal sentimientos, emociones e ideas para avanzar en el proceso de subjetivación y conceptualización. Explora, reflexiona y analiza en la búsqueda de la propia danza para construir procesos interdis ciplinarios y artísticos desde el juego corporal. Identifica y cuestiona las posibilidades del espacio modificándolo con y sin materiales para decidir y avanzar hacia la comprensión del hecho estético. Ejes temáticos: Expresión, comunicación, creación, estética Contribuye al desarrollo de la competencia general del MCN: Comunicación, Pensamiento creativo, Pensamiento crítico, Metacognitiva, Intrapersonal, Relación con otros",
-                  "mcn": []
+                  "mcn": [
+                    "Comunicación",
+                    "Pensamiento creativo",
+                    "Pensamiento crítico",
+                    "Metacognitiva",
+                    "Intrapersonal",
+                    "Relación con otros"
+                  ]
                 },
                 {
                   "codigo": "CE3",
                   "texto": "Competencia productivo-creativa Experimenta y examina las posibilidades expresivas y creativas de su cuerpo para desarrollar un movimiento poético. Identifica y selecciona materiales en interacción con el espacio y sus posibilidades para expre sar, representar y componer corporalmente. Explora e integra desde el juego y diseño corporal para ampliar sus percepciones y participar de manera sensible. Genera y ensambla gestos y movimientos originales, bailando solo y con otros, para evidenciar sus conocimientos, imaginación e inventiva. Representa y combina corporalmente juego y estímulos sensoperceptivos para constituirse como espectador activo. Improvisa, valora e interpreta corporalmente obras plásticas, musicales y literarias, vivencian do con la propia danza, producciones culturales y patrimoniales en los diferentes lenguajes artísticos para su desarrollo integral. Ejes temáticos: Pensamiento divergente, dominio de los elementos formales, criterio estético Contribuye al desarrollo de la competencia general del MCN: Comunicación, Pensamiento creativo, Pensamiento crítico, Pensamiento científico, Pensamiento computacional, Metacog nitiva, Intrapersonal, Iniciativa y orientación a la acción, Relación con otros, Ciudadanía local, global y digital",
-                  "mcn": []
+                  "mcn": [
+                    "Comunicación",
+                    "Pensamiento creativo",
+                    "Pensamiento crítico",
+                    "Pensamiento científico",
+                    "Pensamiento computacional",
+                    "Metacognitiva",
+                    "Intrapersonal",
+                    "Iniciativa y orientación a la acción",
+                    "Relación con otros",
+                    "Ciudadanía local, global y digital"
+                  ]
                 },
                 {
                   "codigo": "CE4",
                   "texto": "Competencia cultural Reconoce, valora e integra la danza como patrimonio intangible de la humanidad para relacio narlo con el cuerpo de saberes específicos de la disciplina. Aprecia, traduce y transfiere desde la corporeidad una obra de arte con apoyo multimedial a partir de una sensibilidad estética para expresar diferentes formas de pensar y de sentir desde la contemporaneidad. Indaga, elige e incorpora un repertorio de obras procedentes de diferentes artistas, desde la evocación de imágenes y su corporización singular, para identificarla como seña de identidad cultural. Ejes temáticos: Interés, autonomía y participación, ciudadanía cultural Contribuye al desarrollo de la competencia general del MCN: Comunicación, Pensamiento creativo, Pensamiento crítico, Pensamiento científico, Pensamiento computacional, Metacog nitiva, Intrapersonal, Iniciativa y orientación a la acción, Relación con otros, Ciudadanía local, global y digital",
-                  "mcn": []
+                  "mcn": [
+                    "Comunicación",
+                    "Pensamiento creativo",
+                    "Pensamiento crítico",
+                    "Pensamiento científico",
+                    "Pensamiento computacional",
+                    "Metacognitiva",
+                    "Intrapersonal",
+                    "Iniciativa y orientación a la acción",
+                    "Relación con otros",
+                    "Ciudadanía local, global y digital"
+                  ]
                 },
                 {
                   "codigo": "CE5",
                   "texto": "Competencia de la práctica corporal colectiva Ayuda, resuelve y decide grupalmente en el establecimiento de vínculos con sus pares a través de la acción poética corporal para desarrollar habilidades comunicativas interpersonales en entornos presenciales y virtuales. Genera y argumenta acuerdos colectivos en un ámbito de confianza para cuidar el cuerpo pro pio y el de sus pares a través de hábitos y normas de convivencia. Reconoce y valora a sus pares afectivamente desde la experiencia corporal para aportar sensi blemente a la construcción de su identidad y a la del grupo de pertenencia. Elabora prácticas corporales desde una perspectiva de responsabilidad, autocuidado y cuida do para ayudar al autoconocimiento. Ejes temáticos: Comunicación, creatividad, construcción cultural colectiva Contribuye al desarrollo de la competencia general del MCN: Comunicación, Pensamiento creativo, Pensamiento crítico, Pensamiento computacional, Metacognitiva, Intrapersonal, Ini ciativa y orientación a la acción, Relación con otros, Ciudadanía local, global y digital",
-                  "mcn": []
+                  "mcn": [
+                    "Comunicación",
+                    "Pensamiento creativo",
+                    "Pensamiento crítico",
+                    "Pensamiento computacional",
+                    "Metacognitiva",
+                    "Intrapersonal",
+                    "Iniciativa y orientación a la acción",
+                    "Relación con otros",
+                    "Ciudadanía local, global y digital"
+                  ]
                 }
               ],
               "contenidos": {},
@@ -11424,7 +11904,7 @@
                     "Pensamiento crítico",
                     "Metacognitiva",
                     "Intrapersonal",
-                    "Rela ción con los otros",
+                    "Relación con otros",
                     "Iniciativa y orientación a la acción"
                   ]
                 },
@@ -11433,7 +11913,7 @@
                   "texto": "Explica su esquema corporal, nociones perceptivas (motrices y afectivas) en situaciones concretas para dar respuesta a las distintas situaciones en su entorno desde una corporeidad integral",
                   "mcn": [
                     "Comunicación",
-                    "Pen samiento creativo",
+                    "Pensamiento creativo",
                     "Pensamiento crítico",
                     "Metacognitiva",
                     "Pensamiento computacional"
@@ -11447,14 +11927,22 @@
                     "Pensamiento creativo",
                     "Pensamiento crítico",
                     "Metacognitiva",
-                    "Relación con los otros",
+                    "Relación con otros",
                     "Iniciativa y orientación a la acción"
                   ]
                 },
                 {
                   "codigo": "CE4",
                   "texto": "Indaga, analiza y explica saberes propios de la Educación Física para generar espacios de comprensión de las diferentes concepciones del área. Contribuye al desarrollo de las compe tencias generales del MCN: Comunicación, Pensamiento creativo, Pensamiento científico, Me tacognitiva, Intrapersonal, Iniciativa y orientación a la acción, Ciudadanía local, global y digital. Contenidos, criterios de logro y su contribución al desarrollo de las competencias específicas de la unidad curricular Los vínculos que se detallan en la siguiente tabla entre las competencias, los contenidos y los criterios de logro responden a una jerarquización sin ser excluyentes. Competencias específicas relacionadas",
-                  "mcn": []
+                  "mcn": [
+                    "Comunicación",
+                    "Pensamiento creativo",
+                    "Pensamiento científico",
+                    "Metacognitiva",
+                    "Intrapersonal",
+                    "Iniciativa y orientación a la acción",
+                    "Ciudadanía local, global y digital"
+                  ]
                 }
               ],
               "contenidos": {},
@@ -11474,14 +11962,19 @@
                   "mcn": [
                     "Pensamiento crítico",
                     "Metacognitiva",
-                    "Pensamiento computa cional",
+                    "Pensamiento computacional",
                     "Intrapersonal"
                   ]
                 },
                 {
                   "codigo": "CE3",
                   "texto": "Identifica algunas formas en las que la tecnología impacta en la vida cotidiana y el am biente, permitiéndole adoptar una actitud crítica y ética. Contribuye al desarrollo de las compe tencias generales del MCN: Pensamiento computacional, Pensamiento científico, Pensamiento crítico, Comunicación",
-                  "mcn": []
+                  "mcn": [
+                    "Pensamiento computacional",
+                    "Pensamiento científico",
+                    "Pensamiento crítico",
+                    "Comunicación"
+                  ]
                 },
                 {
                   "codigo": "CE4",
@@ -11489,8 +11982,8 @@
                   "mcn": [
                     "Pensamiento computacional",
                     "Iniciativa y orientación a la acción",
-                    "Relación con los otros",
-                    "Comunica ción",
+                    "Relación con otros",
+                    "Comunicación",
                     "Pensamiento creativo",
                     "Pensamiento científico",
                     "Pensamiento crítico"
@@ -11499,12 +11992,25 @@
                 {
                   "codigo": "CE5",
                   "texto": "Recupera soluciones propias o ajenas y construye modelos, para resolver problemas sim ples, en grupo y de forma mediada, enriqueciendo sus construcciones y las de otros. Contri buye al desarrollo de las competencias generales del MCN: Comunicación, Pensamiento com putacional, Pensamiento científico, Pensamiento creativo, Iniciativa y orientación a la acción, Relación con los otros, Ciudadanía local, global y digital",
-                  "mcn": []
+                  "mcn": [
+                    "Comunicación",
+                    "Pensamiento computacional",
+                    "Pensamiento científico",
+                    "Pensamiento creativo",
+                    "Iniciativa y orientación a la acción",
+                    "Relación con otros",
+                    "Ciudadanía local, global y digital"
+                  ]
                 },
                 {
                   "codigo": "CE6",
                   "texto": "Utiliza la programación y dispositivos tecnológicos en la implementación colectiva de soluciones para la resolución de problemas. Contribuye al desarrollo de las competencias ge nerales del MCN: Pensamiento creativo, Pensamiento computacional, Metacognitiva, Iniciativa y orientación a la acción",
-                  "mcn": []
+                  "mcn": [
+                    "Pensamiento creativo",
+                    "Pensamiento computacional",
+                    "Metacognitiva",
+                    "Iniciativa y orientación a la acción"
+                  ]
                 },
                 {
                   "codigo": "CE7",

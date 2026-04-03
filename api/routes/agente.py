@@ -3,7 +3,6 @@ from pydantic import BaseModel
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai.types import Content, Part
-from neo4j.exceptions import ServiceUnavailable
 
 from teacher_agent.agent import root_agent
 
@@ -88,11 +87,6 @@ async def chat(body: ChatRequest) -> ChatResponse:
 
         return ChatResponse(session_id=sid, response=response_text)
 
-    except ServiceUnavailable as e:
-        raise HTTPException(
-            status_code=503,
-            detail="Graph database unavailable. Verificá que Neo4j esté corriendo."
-        ) from e
     except Exception as e:
         raise HTTPException(
             status_code=500,

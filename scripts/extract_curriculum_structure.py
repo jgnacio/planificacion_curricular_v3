@@ -7,6 +7,7 @@ and produces a structured JSON file - NO LLM used.
 
 import re
 import json
+import difflib
 import requests
 import logging
 import unicodedata
@@ -212,6 +213,76 @@ def find_tramo_boundaries(lines: list[str], start_idx: int, end_idx: int) -> lis
 
 
 # ---------------------------------------------------------------------------
+# MCN normalization
+# ---------------------------------------------------------------------------
+
+MCN_CANONICAL = [
+    "Comunicación",
+    "Pensamiento crítico",
+    "Pensamiento creativo",
+    "Pensamiento científico",
+    "Pensamiento computacional",
+    "Metacognitiva",
+    "Intrapersonal",
+    "Ciudadanía local, global y digital",
+    "Relación con otros",
+    "Iniciativa y orientación a la acción",
+]
+
+def _mcn_slug(text: str) -> str:
+    text = unicodedata.normalize("NFD", text.lower())
+    text = "".join(c for c in text if unicodedata.category(c) != "Mn")
+    return re.sub(r"\s+", " ", text).strip()
+
+_MCN_SLUG_MAP = {_mcn_slug(c): c for c in MCN_CANONICAL}
+
+def _normalize_mcn_item(raw: str) -> str | None:
+    """Map a raw (possibly OCR-broken) MCN item to a canonical name."""
+    slug = _mcn_slug(re.sub(r"\s+", " ", raw).strip())
+    if slug in _MCN_SLUG_MAP:
+        return _MCN_SLUG_MAP[slug]
+    matches = difflib.get_close_matches(slug, _MCN_SLUG_MAP.keys(), n=1, cutoff=0.72)
+    if matches:
+        return _MCN_SLUG_MAP[matches[0]]
+    for canon_slug, canon_name in _MCN_SLUG_MAP.items():
+        if canon_slug in slug or slug in canon_slug:
+            return canon_name
+    return None
+
+def _parse_mcn_items(raw: str) -> list[str]:
+    """
+    Split a comma-separated MCN string into normalized canonical names.
+    Handles OCR artifacts, 'y/e' conjunctions, and multi-word names like
+    'Ciudadanía local, global y digital' that contain an internal comma.
+    """
+    raw = re.sub(r"\s+", " ", raw).strip().rstrip(".")
+    # Normalize trailing "y X" / "e X" conjunctions into commas
+    raw = re.sub(r"\s+[ye]\s+([A-ZÁÉÍÓÚ])", r", \1", raw)
+    parts = [p.strip().rstrip(".") for p in raw.split(",") if p.strip()]
+
+    results: list[str] = []
+    i = 0
+    while i < len(parts):
+        norm = _normalize_mcn_item(parts[i])
+        if norm:
+            if norm not in results:
+                results.append(norm)
+            i += 1
+        elif i + 1 < len(parts):
+            # Try merging with next part (e.g. "Ciudadanía local" + "global y digital")
+            merged = parts[i] + ", " + parts[i + 1]
+            norm_merged = _normalize_mcn_item(merged)
+            if norm_merged:
+                if norm_merged not in results:
+                    results.append(norm_merged)
+                i += 2
+            else:
+                i += 1
+        else:
+            i += 1
+    return results
+
+
 # CE parsing
 # ---------------------------------------------------------------------------
 
@@ -280,32 +351,7 @@ def parse_ces(lines: list[str], start_idx: int, end_idx: int) -> list[dict]:
         ce_texto = mcn_split[0].strip().rstrip(".")
         mcn_list = []
         if len(mcn_split) > 1:
-            mcn_raw = mcn_split[1].strip().rstrip(".")
-            # Parse MCN items: comma-separated, may end with 'e Intrapersonal' style
-            mcn_raw = re.sub(r"\s+", " ", mcn_raw)
-            # Fix common hyphenation artifacts that left internal spaces in competencia names
-            mcn_raw = re.sub(r"\bPensa miento\b", "Pensamiento", mcn_raw)
-            mcn_raw = re.sub(r"\bComu nicación\b", "Comunicación", mcn_raw)
-            mcn_raw = re.sub(r"\bIntra personal\b", "Intrapersonal", mcn_raw)
-            mcn_raw = re.sub(r"\bMeta cognitiva\b", "Metacognitiva", mcn_raw)
-            mcn_raw = re.sub(r"\bCiudadanía lo cal\b", "Ciudadanía local", mcn_raw)
-            mcn_raw = re.sub(r"\blo cal\b", "local", mcn_raw)
-            mcn_raw = re.sub(r"\bdi gital\b", "digital", mcn_raw)
-            # Protect compound names before splitting:
-            # "Ciudadanía local, global y digital" → treat as one item
-            mcn_raw = re.sub(
-                r"Ciudadanía local,\s*global\s*[ye]\s*digital",
-                "Ciudadanía local-global-digital",
-                mcn_raw
-            )
-            # Normalize "y X" and "e X" at end
-            mcn_raw = re.sub(r"\s+[ye]\s+([A-ZÁÉÍÓÚ])", r", \1", mcn_raw)
-            mcn_items = [x.strip().rstrip(".") for x in mcn_raw.split(",") if x.strip()]
-            # Restore compound name
-            mcn_list = [
-                "Ciudadanía local, global y digital" if x == "Ciudadanía local-global-digital" else x
-                for x in mcn_items
-            ]
+            mcn_list = _parse_mcn_items(mcn_split[1])
 
         ces.append({
             "codigo": code,

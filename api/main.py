@@ -7,7 +7,6 @@ from api.database import Base, engine
 import api.models.planificacion  # noqa: F401 — register ORM models
 import api.models.alumno          # noqa: F401
 from api.routes import curriculum, planificaciones, alumnos
-from api.routes import documents
 from api.routes import agente
 
 # Create SQLite tables on startup
@@ -35,7 +34,6 @@ if os.path.isdir(_pdfs_dir):
 app.include_router(curriculum.router)
 app.include_router(planificaciones.router)
 app.include_router(alumnos.router)
-app.include_router(documents.router)
 app.include_router(agente.router)
 
 
