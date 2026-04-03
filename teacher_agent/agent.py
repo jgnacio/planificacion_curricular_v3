@@ -475,11 +475,13 @@ def consultar_curriculo_estructurado(espacio: str, tramo: int, grado: str) -> di
         else:
             criterios_result = all_criterios
 
-        nombre_materia = materia.get("nombre", esp_data.get("nombre", espacio))
-        print(f"[OK] {nombre_materia} — {len(ces)} CEs, {len(contenidos_result)} bloques de contenidos")
+        nombre_espacio = esp_data.get("nombre", espacio)
+        nombre_materia = materia.get("nombre", nombre_espacio)
+        print(f"[OK] {nombre_espacio} / {nombre_materia} — {len(ces)} CEs, {len(contenidos_result)} bloques de contenidos")
         return {
             "status": "success",
-            "espacio": nombre_materia,
+            "espacio_nombre": nombre_espacio,
+            "unidad": nombre_materia,
             "tramo": tramo,
             "grado_solicitado": grado,
             "competencias_especificas": ces,
@@ -587,14 +589,14 @@ Mostrá el resumen y terminá con los tokens:
 
 Esto es lo que encontré para tu planificación:
 
-📚 **Espacio:** [espacio]
+📚 **Espacio:** [espacio_nombre]
 📖 **Unidad:** [unidad]
 📅 **Tramo:** [tramo] | **Grado:** [grado]
-📝 **Contenido:** [contenido del programa oficial]
+📝 **Contenido:** [contenido del programa oficial, textual]
 🎯 **CE:** [código y enunciado de la competencia específica]
 🧩 **Competencias MCN:** [lista de competencias generales del MCN vinculadas a esta CE, separadas por coma. Si el campo mcn está vacío, omitir esta línea]
-✅ **Criterio de Logro:** [criterio]
-⚡ **Metodología sugerida:** [nombre de la metodología activa] — [una oración explicando por qué es la más adecuada para este contenido y grupo]
+✅ **Criterio de Logro:** [criterio textual exacto tal como aparece en el programa — sin parafrasear ni resumir]
+⚡ **Método de enseñanza:** [nombre de la metodología activa] — [una oración explicando por qué es la más adecuada para este contenido y grupo]
 
 ¿Arrancamos con esto?
 [[Sí, generá la planificación]] [[Quiero cambiar algo]]
@@ -615,11 +617,11 @@ Generá la planificación completa en este formato:
 **Recursos:** materiales realistas para un aula uruguaya.
 
 📎 **Referencias normativas (del programa oficial):**
-- Competencia Específica: [enunciado]
+- Competencia Específica: [enunciado textual exacto]
 - Competencias MCN vinculadas: [lista del campo mcn de la CE, o "—" si vacío]
-- Contenido: [tal como aparece en el programa]
-- Criterio de Logro: [criterio]
-- Tramo: [tramo] | Unidad: [unidad] | Espacio: [espacio]
+- Contenido: [textual exacto tal como aparece en el programa]
+- Criterio de Logro: [textual exacto tal como aparece en el programa — sin parafrasear]
+- Tramo: [tramo] | Unidad: [unidad] | Espacio: [espacio_nombre]
 
 Al terminar: "¿Guardamos esta planificación? [[Sí, guardar]] [[No por ahora]]"
 Si confirma, llamá `crear_planificacion`. Nada más.
@@ -631,11 +633,11 @@ Si confirma, llamá `crear_planificacion`. Nada más.
 3. Buscá en los CEs y contenidos devueltos el que mejor corresponde a la actividad.
 4. Mostrá el resultado:
 
-📚 **Espacio:** [espacio] | 📖 **Unidad:** [unidad] | 📅 **Tramo:** [tramo]
-🎯 **CE:** [código y enunciado]
+📚 **Espacio:** [espacio_nombre] | 📖 **Unidad:** [unidad] | 📅 **Tramo:** [tramo]
+🎯 **CE:** [código y enunciado textual exacto]
 🧩 **Competencias MCN:** [lista del campo mcn, o omitir si vacío]
-📝 **Contenido oficial:** [contenido]
-✅ **Criterio de Logro:** [criterio]
+📝 **Contenido oficial:** [textual exacto tal como aparece en el programa]
+✅ **Criterio de Logro:** [textual exacto tal como aparece en el programa — sin parafrasear]
 
 ### Flujo C — Gestionar planificaciones existentes
 

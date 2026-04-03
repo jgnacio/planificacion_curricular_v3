@@ -125,7 +125,7 @@ function CEAccordion({ ces }: { ces: CE[] }) {
                 {ce.codigo}
               </Chip>
               <span className="text-sm text-foreground flex-1 min-w-0">
-                {isOpen ? ce.texto.slice(0, 60) + "…" : preview}
+                {preview}
               </span>
               <svg
                 className={[
@@ -235,7 +235,6 @@ function CriteriosPanel({
     <div className="space-y-4">
       {Object.entries(gradoData.por_competencia).map(([ceCode, criterios]) => {
         const ceTexto = ceMap[ceCode] ?? "";
-        const preview = ceTexto.slice(0, 50) + (ceTexto.length > 50 ? "…" : "");
         return (
           <div key={ceCode} className="border border-border rounded-xl p-4 space-y-2">
             <div className="flex items-start gap-2">
@@ -243,7 +242,7 @@ function CriteriosPanel({
                 {ceCode}
               </Chip>
               {ceTexto && (
-                <p className="text-sm font-medium text-foreground leading-snug">{preview}</p>
+                <p className="text-sm font-medium text-foreground leading-snug">{ceTexto}</p>
               )}
             </div>
             <ol className="list-decimal list-inside space-y-1 pl-1">

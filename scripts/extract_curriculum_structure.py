@@ -629,6 +629,7 @@ def parse_criterios_block(lines: list[str], start_idx: int, end_idx: int, grade_
     por_competencia = {}
     pending_bullets = []
     current_ce = None
+    bullet_mode = False  # True once we see any * bullet — disables plain-text fallback
 
     i = data_start
     while i < end_idx:
@@ -640,6 +641,10 @@ def parse_criterios_block(lines: list[str], start_idx: int, end_idx: int, grade_
             continue
         if is_page_number(line):
             continue
+
+        # Hard stop: entering a contenidos section means criterios are over
+        if re.match(r"^Contenidos específicos", line, re.IGNORECASE):
+            break
 
         # Check skip patterns
         should_skip = False
@@ -673,7 +678,8 @@ def parse_criterios_block(lines: list[str], start_idx: int, end_idx: int, grade_
                 next_line = lines[i].strip()
                 if (next_line.startswith("*") or re.match(r"^CE\d+", next_line)
                         or is_page_number(next_line) or not next_line
-                        or re.match(r"^\d+\.\s+[A-ZÁÉÍÓÚÑ]", next_line)):
+                        or re.match(r"^\d+\.\s+[A-ZÁÉÍÓÚÑ]", next_line)
+                        or re.match(r"^Contenidos específicos", next_line, re.IGNORECASE)):
                     break
                 i += 1
             continue
@@ -689,7 +695,19 @@ def parse_criterios_block(lines: list[str], start_idx: int, end_idx: int, grade_
 
         # Bullet item (Matemática-style: * texto)
         if line.startswith("*") or line.startswith("-"):
+            bullet_mode = True
             text = line.lstrip("*").lstrip("-").strip()
+            # Join continuation lines (same sentence split across PDF lines)
+            while i < end_idx:
+                next_line = lines[i].strip()
+                if (not next_line or is_page_number(next_line)
+                        or next_line.startswith("*") or next_line.startswith("-")
+                        or re.match(r"^CE\d+", next_line)
+                        or re.match(r"^\d+\.\s+", next_line)
+                        or re.match(r"^Contenidos específicos", next_line, re.IGNORECASE)):
+                    break
+                text = text.rstrip(".") + " " + next_line if not text.endswith(".") else text + " " + next_line
+                i += 1
             if text:
                 pending_bullets.append(text)
             continue
@@ -706,7 +724,8 @@ def parse_criterios_block(lines: list[str], start_idx: int, end_idx: int, grade_
                 if (not next_line or is_page_number(next_line)
                         or re.match(r"^\d+\.\s+", next_line)
                         or re.match(r"^CE\d+", next_line)
-                        or re.match(r"^\*", next_line)):
+                        or re.match(r"^\*", next_line)
+                        or re.match(r"^Contenidos específicos", next_line, re.IGNORECASE)):
                     break
                 # Continuation: starts with lowercase or mid-sentence word
                 text = text.rstrip(".") + " " + next_line if not text.endswith(".") else text + " " + next_line
@@ -715,9 +734,9 @@ def parse_criterios_block(lines: list[str], start_idx: int, end_idx: int, grade_
                 por_competencia.setdefault(current_ce, []).append(text.strip())
             continue
 
-        # Non-bullet text line that's not a CE marker — could be a criterion in simple format
-        # Only add if it looks like a criterion sentence (starts with uppercase verb)
-        if re.match(r"^[A-ZÁÉÍÓÚÑ]", line) and len(line) > 10:
+        # Non-bullet text line that's not a CE marker — plain-text criterion (Lengua simple style).
+        # Disabled in bullet_mode to avoid capturing contenidos lines as criterios.
+        if not bullet_mode and re.match(r"^[A-ZÁÉÍÓÚÑ]", line) and len(line) > 10:
             pending_bullets.append(line)
 
     # Flush remaining
@@ -751,29 +770,32 @@ def parse_criterios(lines: list[str], tramo_start: int, tramo_end: int) -> dict:
     criterios_headers = []
     for i in range(tramo_start, tramo_end):
         line = lines[i].strip()
-        # Standard long form
+        # Standard long form (highest priority)
         m = re.match(r"Criterios de logro para la evaluación de (\d+)[\.\º]?(?:er|to|.o)? grado", line)
         if m:
-            criterios_headers.append({"grade": m.group(1), "line_idx": i})
+            criterios_headers.append({"grade": m.group(1), "line_idx": i, "priority": 2})
             continue
         # Short form with dash: "Criterios de logro - 3.er grado"
         m2 = re.match(r"Criterio[s]? de logro[s]?\s*[-–]\s*(\d+)[\.\º]?(?:er|to|.o)? grado", line)
         if m2:
-            criterios_headers.append({"grade": m2.group(1), "line_idx": i})
+            criterios_headers.append({"grade": m2.group(1), "line_idx": i, "priority": 2})
             continue
-        # Combined contenidos+criterios header
+        # Combined contenidos+criterios header (lower priority — mixed section, hard to parse cleanly)
         m3 = re.match(r"Contenidos específicos,?\s+criterios? de logro.*?de (\d+)[\.\º]?(?:er|to|.o)? grado", line)
         if m3:
-            criterios_headers.append({"grade": m3.group(1), "line_idx": i})
+            criterios_headers.append({"grade": m3.group(1), "line_idx": i, "priority": 1})
             continue
 
-    # Deduplicate
-    seen_grades = {}
-    unique_headers = []
+    # Deduplicate: keep highest-priority header per grade (standalone > combined).
+    # Among equal priority, keep the first occurrence.
+    seen_grades: dict[str, dict] = {}
     for h in criterios_headers:
-        if h["grade"] not in seen_grades:
-            seen_grades[h["grade"]] = h
-            unique_headers.append(h)
+        g = h["grade"]
+        if g not in seen_grades or h["priority"] > seen_grades[g]["priority"]:
+            seen_grades[g] = h
+    unique_headers = sorted(seen_grades.values(), key=lambda x: x["line_idx"])
+
+
 
     # Boundary detection
     all_bounds = sorted([h["line_idx"] for h in unique_headers] + [tramo_end])

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useTheme } from "next-themes";
 import { UserButton } from "@clerk/nextjs";
 import { Button, Card, Chip, Separator } from "@heroui/react";
@@ -37,7 +37,7 @@ function Icon({ icon, size = 16, stroke = "currentColor", strokeWidth = 2 }: Ico
       strokeLinejoin="round"
     >
       {icon.map(([tag, attrs], i) => {
-        const El = tag as keyof JSX.IntrinsicElements;
+        const El = tag as keyof React.JSX.IntrinsicElements;
         return <El key={i} {...(attrs as object)} />;
       })}
     </svg>
