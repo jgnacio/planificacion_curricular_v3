@@ -1,0 +1,6 @@
+google-adk
+google-cloud-aiplatform[agent_engines]
+httpx
+duckduckgo-search
+beautifulsoup4
+python-dotenv

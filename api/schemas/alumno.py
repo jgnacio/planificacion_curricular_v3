@@ -20,6 +20,7 @@ class AlumnoUpdate(BaseModel):
 
 class AlumnoRead(BaseModel):
     id: int
+    user_id: str
     nombre_completo: str
     fecha_nacimiento: str | None
     nivel: str | None

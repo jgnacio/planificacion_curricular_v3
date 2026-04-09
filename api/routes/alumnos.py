@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from api.auth import get_current_user_id
 from api.database import get_db
 from api.models.alumno import Alumno
 from api.schemas.alumno import AlumnoCreate, AlumnoRead, AlumnoUpdate
@@ -9,13 +10,13 @@ router = APIRouter(prefix="/alumnos", tags=["alumnos"])
 
 
 @router.get("/", response_model=list[AlumnoRead])
-def listar(db: Session = Depends(get_db)):
-    return db.query(Alumno).order_by(Alumno.nombre_completo).all()
+def listar(uid: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
+    return db.query(Alumno).filter(Alumno.user_id == uid).order_by(Alumno.nombre_completo).all()
 
 
 @router.post("/", response_model=AlumnoRead, status_code=201)
-def crear(data: AlumnoCreate, db: Session = Depends(get_db)):
-    a = Alumno(**data.model_dump())
+def crear(data: AlumnoCreate, uid: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
+    a = Alumno(**data.model_dump(), user_id=uid)
     db.add(a)
     db.commit()
     db.refresh(a)
@@ -23,16 +24,16 @@ def crear(data: AlumnoCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/{alumno_id}", response_model=AlumnoRead)
-def obtener(alumno_id: int, db: Session = Depends(get_db)):
-    a = db.get(Alumno, alumno_id)
+def obtener(alumno_id: int, uid: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
+    a = db.query(Alumno).filter(Alumno.id == alumno_id, Alumno.user_id == uid).first()
     if not a:
         raise HTTPException(status_code=404, detail="Alumno no encontrado")
     return a
 
 
 @router.put("/{alumno_id}", response_model=AlumnoRead)
-def actualizar(alumno_id: int, data: AlumnoUpdate, db: Session = Depends(get_db)):
-    a = db.get(Alumno, alumno_id)
+def actualizar(alumno_id: int, data: AlumnoUpdate, uid: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
+    a = db.query(Alumno).filter(Alumno.id == alumno_id, Alumno.user_id == uid).first()
     if not a:
         raise HTTPException(status_code=404, detail="Alumno no encontrado")
     for field, value in data.model_dump(exclude_unset=True).items():
@@ -43,8 +44,8 @@ def actualizar(alumno_id: int, data: AlumnoUpdate, db: Session = Depends(get_db)
 
 
 @router.delete("/{alumno_id}", status_code=204)
-def eliminar(alumno_id: int, db: Session = Depends(get_db)):
-    a = db.get(Alumno, alumno_id)
+def eliminar(alumno_id: int, uid: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
+    a = db.query(Alumno).filter(Alumno.id == alumno_id, Alumno.user_id == uid).first()
     if not a:
         raise HTTPException(status_code=404, detail="Alumno no encontrado")
     db.delete(a)

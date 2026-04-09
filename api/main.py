@@ -18,9 +18,12 @@ app = FastAPI(
     version="1.0.0",
 )
 
+_frontend_domain = os.getenv("FRONTEND_DOMAIN", "*")
+_origins = [_frontend_domain] if _frontend_domain != "*" else ["*"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

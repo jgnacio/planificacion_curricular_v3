@@ -1,17 +1,11 @@
 import os
-import sys
-
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from dotenv import load_dotenv
 from google.adk.agents import Agent
+from google.adk.tools import ToolContext
 from google.genai import types as genai_types
 from pydantic import BaseModel, Field
 from typing import List
-
-from api.database import SessionLocal
-from api.models.planificacion import Planificacion
-from api.models.alumno import Alumno
 
 import httpx
 import json
@@ -21,87 +15,100 @@ from duckduckgo_search import DDGS
 
 load_dotenv()
 
-OPEN_NOTEBOOK_URL = "http://localhost:5055"
-OPEN_NOTEBOOK_NOTEBOOK_ID = "notebook:plf3f24qx6nui9zmn3vl"  # Facilitador Docente
-OPEN_NOTEBOOK_MODEL = "model:fi2x3hf9fvjdxl25ljwt"  # gemini-2.5-flash
+OPEN_NOTEBOOK_URL = os.getenv("OPEN_NOTEBOOK_URL", "http://localhost:5055")
+OPEN_NOTEBOOK_API_KEY = os.getenv("OPEN_NOTEBOOK_API_KEY", "")
+OPEN_NOTEBOOK_NOTEBOOK_ID = os.getenv("OPEN_NOTEBOOK_NOTEBOOK_ID", "notebook:plf3f24qx6nui9zmn3vl")
+OPEN_NOTEBOOK_MODEL = os.getenv("OPEN_NOTEBOOK_MODEL", "model:fi2x3hf9fvjdxl25ljwt")
 
-# Validate GOOGLE_API_KEY at import time — fail fast, not at first request
-if not os.getenv("GOOGLE_API_KEY"):
+INTERNAL_API_URL = os.getenv("INTERNAL_API_URL", "http://localhost:8000")
+INTERNAL_API_KEY = os.getenv("INTERNAL_API_KEY", "")
+
+# Vertex AI backend — ADK usa ADC (service account en Cloud Run, gcloud auth en local)
+# GOOGLE_GENAI_USE_VERTEXAI=1 activa el backend; GOOGLE_CLOUD_PROJECT y LOCATION son requeridos
+_use_vertexai = os.getenv("GOOGLE_GENAI_USE_VERTEXAI", "0") in ("1", "true", "True")
+if _use_vertexai:
+    import vertexai
+    vertexai.init(
+        project=os.getenv("GOOGLE_CLOUD_PROJECT", ""),
+        location=os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1"),
+    )
+else:
+    # Dev local con GOOGLE_API_KEY (Google AI Studio)
+    if not os.getenv("GOOGLE_API_KEY"):
+        raise ValueError(
+            "Configurá GOOGLE_API_KEY (dev) o GOOGLE_GENAI_USE_VERTEXAI=1 (prod)."
+        )
+
+if not INTERNAL_API_URL:
     raise ValueError(
-        "GOOGLE_API_KEY no está configurada en el entorno. "
+        "INTERNAL_API_URL no está configurada en el entorno. "
         "Agregala al archivo .env antes de iniciar la aplicación."
     )
 
 # ==========================================
-# HERRAMIENTAS — SQLite (planificaciones y alumnos)
+# HERRAMIENTAS — API HTTP (planificaciones y alumnos)
 # ==========================================
 
-def listar_alumnos(nivel: str = "", grado: str = "") -> dict:
+def _internal_headers(user_id: str) -> dict:
+    return {"X-Internal-Key": INTERNAL_API_KEY, "Content-Type": "application/json"}
+
+
+def listar_alumnos(tool_context: ToolContext, nivel: str = "", grado: str = "") -> dict:
     """
     Lista los alumnos registrados. Filtra opcionalmente por nivel y/o grado.
     Usá esta herramienta antes de crear una planificación para conocer el grupo:
     cantidad de alumnos, sus niveles, grados y cualquier nota especial sobre ellos.
     """
-    db = SessionLocal()
+    user_id = tool_context.state.get("user_id", "")
+    params = {"user_id": user_id}
+    if nivel:
+        params["nivel"] = nivel
+    if grado:
+        params["grado"] = grado
     try:
-        q = db.query(Alumno)
-        if nivel:
-            q = q.filter(Alumno.nivel.ilike(f"%{nivel}%"))
-        if grado:
-            q = q.filter(Alumno.grado.ilike(f"%{grado}%"))
-        alumnos = q.order_by(Alumno.nombre_completo).all()
+        r = httpx.get(
+            f"{INTERNAL_API_URL}/alumnos/",
+            params=params,
+            headers=_internal_headers(user_id),
+            timeout=10.0,
+        )
+        r.raise_for_status()
+        alumnos = r.json()
         return {
             "status": "success",
             "total": len(alumnos),
-            "alumnos": [
-                {
-                    "id": a.id,
-                    "nombre_completo": a.nombre_completo,
-                    "fecha_nacimiento": a.fecha_nacimiento,
-                    "nivel": a.nivel,
-                    "grado": a.grado,
-                    "notas": a.notas,
-                }
-                for a in alumnos
-            ],
+            "alumnos": alumnos,
         }
     except Exception as e:
         return {"status": "error", "error_message": str(e)}
-    finally:
-        db.close()
 
 
-def listar_planificaciones() -> dict:
+def listar_planificaciones(tool_context: ToolContext) -> dict:
     """
     Lista todas las planificaciones guardadas en la base de datos, ordenadas de más reciente a más antigua.
     Usá esta herramienta cuando la docente quiera ver, modificar o eliminar planificaciones existentes.
     """
-    db = SessionLocal()
+    user_id = tool_context.state.get("user_id", "")
     try:
-        plans = db.query(Planificacion).order_by(Planificacion.created_at.desc()).all()
+        r = httpx.get(
+            f"{INTERNAL_API_URL}/planificaciones/",
+            params={"user_id": user_id},
+            headers=_internal_headers(user_id),
+            timeout=10.0,
+        )
+        r.raise_for_status()
+        plans = r.json()
         return {
             "status": "success",
             "total": len(plans),
-            "planificaciones": [
-                {
-                    "id": p.id,
-                    "nombre": p.nombre,
-                    "nivel": p.nivel,
-                    "periodo_inicio": p.periodo_inicio,
-                    "periodo_fin": p.periodo_fin,
-                    "espacios_json": p.espacios_json,
-                    "created_at": p.created_at.isoformat(),
-                }
-                for p in plans
-            ],
+            "planificaciones": plans,
         }
     except Exception as e:
         return {"status": "error", "error_message": str(e)}
-    finally:
-        db.close()
 
 
 def crear_planificacion(
+    tool_context: ToolContext,
     nombre: str,
     descripcion: str = "",
     nivel: str = "",
@@ -116,34 +123,38 @@ def crear_planificacion(
     En chat_exportado incluí el texto íntegro de la planificación generada con todas sus referencias
     (CE ID, contenido, criterio de logro, página, PDF fuente).
     """
-    db = SessionLocal()
+    user_id = tool_context.state.get("user_id", "")
+    payload = {
+        "nombre": nombre,
+        "descripcion": descripcion or None,
+        "nivel": nivel or None,
+        "periodo_inicio": periodo_inicio or None,
+        "periodo_fin": periodo_fin or None,
+        "espacios_json": espacios_json or None,
+        "chat_exportado": chat_exportado or None,
+    }
     try:
-        plan = Planificacion(
-            nombre=nombre,
-            descripcion=descripcion or None,
-            nivel=nivel or None,
-            periodo_inicio=periodo_inicio or None,
-            periodo_fin=periodo_fin or None,
-            espacios_json=espacios_json or None,
-            chat_exportado=chat_exportado or None,
+        r = httpx.post(
+            f"{INTERNAL_API_URL}/planificaciones/",
+            params={"user_id": user_id},
+            headers=_internal_headers(user_id),
+            json=payload,
+            timeout=10.0,
         )
-        db.add(plan)
-        db.commit()
-        db.refresh(plan)
+        r.raise_for_status()
+        plan = r.json()
         return {
             "status": "success",
-            "planificacion_id": plan.id,
-            "nombre": plan.nombre,
-            "message": f"Planificación '{plan.nombre}' guardada con ID {plan.id}.",
+            "planificacion_id": plan["id"],
+            "nombre": plan["nombre"],
+            "message": f"Planificación '{plan['nombre']}' guardada con ID {plan['id']}.",
         }
     except Exception as e:
-        db.rollback()
         return {"status": "error", "error_message": str(e)}
-    finally:
-        db.close()
 
 
 def actualizar_planificacion(
+    tool_context: ToolContext,
     planificacion_id: int,
     nombre: str = "",
     descripcion: str = "",
@@ -157,38 +168,34 @@ def actualizar_planificacion(
     Actualiza una planificación existente. Solo se modifican los campos que reciban un valor no vacío.
     Usá listar_planificaciones primero para obtener el ID correcto.
     """
-    db = SessionLocal()
+    user_id = tool_context.state.get("user_id", "")
+    payload = {k: v for k, v in {
+        "nombre": nombre or None,
+        "descripcion": descripcion or None,
+        "nivel": nivel or None,
+        "periodo_inicio": periodo_inicio or None,
+        "periodo_fin": periodo_fin or None,
+        "espacios_json": espacios_json or None,
+        "chat_exportado": chat_exportado or None,
+    }.items() if v is not None}
     try:
-        plan = db.query(Planificacion).filter(Planificacion.id == planificacion_id).first()
-        if not plan:
-            return {"status": "error", "error_message": f"No existe planificación con ID {planificacion_id}."}
-        if nombre:
-            plan.nombre = nombre
-        if descripcion:
-            plan.descripcion = descripcion
-        if nivel:
-            plan.nivel = nivel
-        if periodo_inicio:
-            plan.periodo_inicio = periodo_inicio
-        if periodo_fin:
-            plan.periodo_fin = periodo_fin
-        if espacios_json:
-            plan.espacios_json = espacios_json
-        if chat_exportado:
-            plan.chat_exportado = chat_exportado
-        db.commit()
-        db.refresh(plan)
+        r = httpx.put(
+            f"{INTERNAL_API_URL}/planificaciones/{planificacion_id}",
+            params={"user_id": user_id},
+            headers=_internal_headers(user_id),
+            json=payload,
+            timeout=10.0,
+        )
+        r.raise_for_status()
+        plan = r.json()
         return {
             "status": "success",
-            "planificacion_id": plan.id,
-            "nombre": plan.nombre,
-            "message": f"Planificación ID {plan.id} actualizada correctamente.",
+            "planificacion_id": plan["id"],
+            "nombre": plan["nombre"],
+            "message": f"Planificación ID {plan['id']} actualizada correctamente.",
         }
     except Exception as e:
-        db.rollback()
         return {"status": "error", "error_message": str(e)}
-    finally:
-        db.close()
 
 
 def buscar_en_internet(consulta: str) -> dict:
@@ -264,28 +271,28 @@ def buscar_en_internet(consulta: str) -> dict:
     }
 
 
-def eliminar_planificacion(planificacion_id: int) -> dict:
+def eliminar_planificacion(tool_context: ToolContext, planificacion_id: int) -> dict:
     """
     Elimina permanentemente una planificación por su ID.
     Siempre confirmá con la docente antes de eliminar. Usá listar_planificaciones para obtener el ID.
     """
-    db = SessionLocal()
+    user_id = tool_context.state.get("user_id", "")
     try:
-        plan = db.query(Planificacion).filter(Planificacion.id == planificacion_id).first()
-        if not plan:
+        r = httpx.delete(
+            f"{INTERNAL_API_URL}/planificaciones/{planificacion_id}",
+            params={"user_id": user_id},
+            headers=_internal_headers(user_id),
+            timeout=10.0,
+        )
+        if r.status_code == 404:
             return {"status": "error", "error_message": f"No existe planificación con ID {planificacion_id}."}
-        nombre = plan.nombre
-        db.delete(plan)
-        db.commit()
+        r.raise_for_status()
         return {
             "status": "success",
-            "message": f"Planificación '{nombre}' (ID {planificacion_id}) eliminada correctamente.",
+            "message": f"Planificación ID {planificacion_id} eliminada correctamente.",
         }
     except Exception as e:
-        db.rollback()
         return {"status": "error", "error_message": str(e)}
-    finally:
-        db.close()
 
 
 def consultar_curriculo_oficial(pregunta: str) -> dict:
@@ -309,8 +316,10 @@ def consultar_curriculo_oficial(pregunta: str) -> dict:
     """
     print(f"\n[TOOL consultar_curriculo_oficial] Pregunta: '{pregunta[:80]}'")
     try:
+        headers = {"X-API-Key": OPEN_NOTEBOOK_API_KEY} if OPEN_NOTEBOOK_API_KEY else {}
         response = httpx.post(
             f"{OPEN_NOTEBOOK_URL}/api/search/ask/simple",
+            headers=headers,
             json={
                 "question": pregunta,
                 "notebook_id": OPEN_NOTEBOOK_NOTEBOOK_ID,
@@ -344,9 +353,7 @@ def consultar_curriculo_oficial(pregunta: str) -> dict:
 # ==========================================
 
 _CURRICULUM_JSON_PATH = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-    "data",
-    "curriculum_structure.json",
+    os.path.dirname(__file__), "..", "data", "curriculum_structure.json"
 )
 _curriculum_data: dict | None = None
 

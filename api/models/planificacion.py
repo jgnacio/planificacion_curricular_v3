@@ -8,6 +8,7 @@ class Planificacion(Base):
     __tablename__ = "planificaciones"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    user_id: Mapped[str] = mapped_column(String(200), nullable=False, index=True)
     nombre: Mapped[str] = mapped_column(String(200))
     descripcion: Mapped[str | None] = mapped_column(Text, nullable=True)
     nivel: Mapped[str | None] = mapped_column(String(100), nullable=True)

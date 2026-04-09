@@ -24,6 +24,7 @@ class PlanificacionUpdate(BaseModel):
 
 class PlanificacionRead(BaseModel):
     id: int
+    user_id: str
     nombre: str
     descripcion: str | None
     nivel: str | None

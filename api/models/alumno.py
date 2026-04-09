@@ -8,6 +8,7 @@ class Alumno(Base):
     __tablename__ = "alumnos"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    user_id: Mapped[str] = mapped_column(String(200), nullable=False, index=True)
     nombre_completo: Mapped[str] = mapped_column(String(200))
     fecha_nacimiento: Mapped[str | None] = mapped_column(String(20), nullable=True)
     nivel: Mapped[str | None] = mapped_column(String(50), nullable=True)
