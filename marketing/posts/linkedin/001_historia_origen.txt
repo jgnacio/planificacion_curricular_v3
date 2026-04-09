@@ -6,38 +6,24 @@
 
 Construí una herramienta de IA porque vi a mi prometida trabajar hasta muy tarde planificando clases.
 
-
 Ella es maestra. Agenda llena, cero tiempo libre.
-
 
 Un día le pregunté: "¿Y si este año no tuvieras que planificar nada?"
 
-
 Me miró y dijo: "¿Eso se puede hacer?"
-
 
 Ahí arrancó Facilitador Docente.
 
-
 Un agente que genera planificaciones curriculares adaptadas al programa oficial de ANEP Uruguay. El docente describe qué quiere enseñar. El agente lo convierte en una planificación completa en minutos.
 
+Cada planificación generada es 1 hora que ella duerme.
 
-Stack técnico:
+Esto no es un side project.
+Es el producto que estoy construyendo en Bit-A.
 
-→ Google ADK + Gemini para el agente
+¿Cuántas horas semanales perdés (o pierde alguien que conocés) planificando clases?
 
-→ Neo4j para el grafo del currículo oficial
-
-→ Next.js para el frontend
-
-
-Lleva 5 planificaciones generadas. Cada una ahorra 1hr de trabajo.
-
-
-Esto no es un side project. Es el producto que estoy construyendo en Bit-A.
-
-
-Si trabajás en educación, tecnología, o conocés docentes uruguayos que necesitan esto, hablemos.
+#EdTech #EducaciónUruguay #DocentesUruguay #IA
 ---
 
 # MÉTRICAS (completar después de publicar)

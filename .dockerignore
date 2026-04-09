@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+ebi.db
+facilitador_docente/
+mobile_app/
+marketing/
+surreal_data/
+notebook_data/
+.git/
+*.sh
+tests/
