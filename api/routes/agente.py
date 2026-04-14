@@ -1,11 +1,17 @@
 import os
+import json
+import logging
+import traceback
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from api.auth import get_current_user_id
 
-AGENT_ENGINE_RESOURCE_NAME = os.getenv("AGENT_ENGINE_RESOURCE_NAME", "")
+logger = logging.getLogger(__name__)
+
+AGENT_ENGINE_RESOURCE_NAME = ""
 GOOGLE_CLOUD_PROJECT = os.getenv("GOOGLE_CLOUD_PROJECT", "")
 GOOGLE_CLOUD_LOCATION = os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1")
 
@@ -60,9 +66,23 @@ class ChatResponse(BaseModel):
 
 router = APIRouter(prefix="/agente", tags=["agente"])
 
+# ==========================================
+# TOOL LABELS (para SSE streaming)
+# ==========================================
+
+_TOOL_LABELS: dict[str, str] = {
+    "consultar_curriculo_estructurado": "Consultando currículo EBI…",
+    "consultar_curriculo_oficial":      "Leyendo programa oficial…",
+    "listar_alumnos":                   "Consultando lista de alumnos…",
+    "listar_planificaciones":           "Buscando planificaciones…",
+    "crear_planificacion":              "Guardando planificación…",
+    "actualizar_planificacion":         "Actualizando planificación…",
+    "eliminar_planificacion":           "Eliminando planificación…",
+    "buscar_en_internet":               "Buscando en internet…",
+}
 
 # ==========================================
-# ENDPOINT
+# ENDPOINTS
 # ==========================================
 
 @router.post("/chat", response_model=ChatResponse)
@@ -81,7 +101,78 @@ async def chat(body: ChatRequest, uid: str = Depends(get_current_user_id)) -> Ch
             return await _chat_agent_engine(body, uid)
         return await _chat_local(body, uid)
     except Exception as e:
+        logger.error("Error en /agente/chat: %s\n%s", e, traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error interno del agente: {str(e)}") from e
+
+
+@router.post("/chat/stream")
+async def chat_stream(body: ChatRequest, uid: str = Depends(get_current_user_id)) -> StreamingResponse:
+    """
+    SSE endpoint — emite eventos de tool calls + respuesta final.
+    Formato: data: {"type": "tool"|"done"|"error", ...}
+    """
+    async def generate():
+        try:
+            async for evt in _stream_local(body, uid):
+                yield f"data: {json.dumps(evt, ensure_ascii=False)}\n\n"
+        except Exception as e:
+            logger.error("Error en /agente/chat/stream: %s\n%s", e, traceback.format_exc())
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+async def _stream_local(body: ChatRequest, user_id: str):
+    """Generador async — yield eventos SSE del runner local."""
+    from google.genai.types import Content, Part
+
+    sid = body.session_id
+    if not sid:
+        session = await _session_service.create_session(
+            app_name="facilitador_docente",
+            user_id=user_id,
+            state={"user_id": user_id},
+        )
+        sid = session.id
+    else:
+        session = await _session_service.get_session(
+            app_name="facilitador_docente",
+            user_id=user_id,
+            session_id=sid,
+        )
+        if not session:
+            session = await _session_service.create_session(
+                app_name="facilitador_docente",
+                user_id=user_id,
+                session_id=sid,
+                state={"user_id": user_id},
+            )
+            sid = session.id
+
+    response_text = ""
+    async for event in _runner.run_async(
+        user_id=user_id,
+        session_id=sid,
+        new_message=Content(parts=[Part(text=body.message)]),
+    ):
+        # Detectar tool calls y emitir label amigable
+        if event.content and event.content.parts:
+            for part in event.content.parts:
+                fn = getattr(part, "function_call", None)
+                if fn and fn.name:
+                    label = _TOOL_LABELS.get(fn.name, f"{fn.name}…")
+                    yield {"type": "tool", "tool": fn.name, "label": label}
+
+        if event.is_final_response():
+            if event.content and event.content.parts:
+                response_text = getattr(event.content.parts[0], "text", "") or ""
+            break
+
+    yield {"type": "done", "session_id": sid, "response": response_text}
 
 
 async def _chat_local(body: ChatRequest, user_id: str) -> ChatResponse:
@@ -127,24 +218,45 @@ async def _chat_local(body: ChatRequest, user_id: str) -> ChatResponse:
 
 
 async def _chat_agent_engine(body: ChatRequest, user_id: str) -> ChatResponse:
-    """Proxy a Vertex AI Agent Engine."""
-    sid = body.session_id or f"session-{user_id}"
-
+    """Proxy a Vertex AI Agent Engine via stream_query (ADK)."""
     import asyncio
+
+    agent = _get_remote_agent()
     loop = asyncio.get_event_loop()
 
-    def _query():
-        return _get_remote_agent().query(
-            input=body.message,
-            config={"configurable": {"session_id": sid, "user_id": user_id}},
-        )
+    # Crear o reusar sesión
+    def _get_or_create_session(sid: str | None) -> str:
+        if sid:
+            try:
+                session = agent.get_session(user_id=user_id, session_id=sid)
+                return session["id"]
+            except Exception:
+                pass
+        session = agent.create_session(user_id=user_id)
+        return session["id"]
 
-    result = await loop.run_in_executor(None, _query)
+    sid = await loop.run_in_executor(None, _get_or_create_session, body.session_id)
 
-    # Extraer texto de la respuesta
-    if isinstance(result, dict):
-        response_text = result.get("output", result.get("response", str(result)))
-    else:
-        response_text = str(result)
+    # Enviar mensaje y colectar respuesta final
+    def _stream():
+        response_text = ""
+        for event in agent.stream_query(
+            user_id=user_id,
+            session_id=sid,
+            message=body.message,
+        ):
+            # El evento final tiene el texto de respuesta
+            if isinstance(event, dict):
+                content = event.get("content", {})
+                if isinstance(content, dict):
+                    parts = content.get("parts", [])
+                    for part in parts:
+                        if isinstance(part, dict) and part.get("text"):
+                            response_text = part["text"]
+            # También puede ser un string directo
+            elif isinstance(event, str):
+                response_text = event
+        return response_text
 
-    return ChatResponse(session_id=sid, response=response_text)
+    response_text = await loop.run_in_executor(None, _stream)
+    return ChatResponse(session_id=sid, response=response_text or "El agente no respondió.")

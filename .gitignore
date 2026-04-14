@@ -68,3 +68,6 @@ claude_session
 # OS files
 .DS_Store
 Thumbs.db
+
+#Marketing
+/marketing/
