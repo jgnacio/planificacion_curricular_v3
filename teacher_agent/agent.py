@@ -5,7 +5,7 @@ from google.adk.agents import Agent
 from google.adk.tools import ToolContext
 from google.genai import types as genai_types
 from pydantic import BaseModel, Field
-from typing import List
+from typing import List, Optional
 
 import httpx
 import json
@@ -17,8 +17,8 @@ load_dotenv()
 
 OPEN_NOTEBOOK_URL = os.getenv("OPEN_NOTEBOOK_URL", "http://localhost:5055")
 OPEN_NOTEBOOK_API_KEY = os.getenv("OPEN_NOTEBOOK_API_KEY", "")
-OPEN_NOTEBOOK_NOTEBOOK_ID = os.getenv("OPEN_NOTEBOOK_NOTEBOOK_ID", "notebook:plf3f24qx6nui9zmn3vl")
-OPEN_NOTEBOOK_MODEL = os.getenv("OPEN_NOTEBOOK_MODEL", "model:fi2x3hf9fvjdxl25ljwt")
+OPEN_NOTEBOOK_NOTEBOOK_ID = os.getenv("OPEN_NOTEBOOK_NOTEBOOK_ID", "notebook:4blvxvmp0bb4cud5r004")
+OPEN_NOTEBOOK_MODEL = os.getenv("OPEN_NOTEBOOK_MODEL", "model:7zoi10k3sca4qvqacud4")
 
 INTERNAL_API_URL = os.getenv("INTERNAL_API_URL", "http://localhost:8000")
 INTERNAL_API_KEY = os.getenv("INTERNAL_API_KEY", "")
@@ -119,9 +119,15 @@ def crear_planificacion(
 ) -> dict:
     """
     Guarda una nueva planificación en la base de datos.
-    Llamá esta herramienta DESPUÉS de generar la planificación completa y mostrársela a la docente.
-    En chat_exportado incluí el texto íntegro de la planificación generada con todas sus referencias
-    (CE ID, contenido, criterio de logro, página, PDF fuente).
+    Llamá esta herramienta DESPUÉS de mostrar la planificación y obtener confirmación de la docente.
+    En chat_exportado incluí el objeto planificacion completo serializado como JSON string
+    (el mismo objeto que devolviste en el campo planificacion de tu respuesta, con titulo, grupo,
+    justificacion, metodologia, metodologia_descripcion, momentos, ce_codigo, ce_texto, contenido,
+    criterio_de_logro, espacio, unidad, tramo, competencias_mcn).
+    Cada momento debe incluir meta_aprendizaje.
+    En el caso de secuencia (type='secuencia'), chat_exportado debe contener el objeto secuencia
+    serializado como JSON string (con espacio, unidad_curricular, competencias_generales,
+    competencias_especificas, criterios_de_logro, meta_aprendizaje, contenido, evaluaciones, actividades).
     """
     user_id = tool_context.state.get("user_id", "")
     payload = {
@@ -514,22 +520,101 @@ class PdfRef(BaseModel):
     label: str = Field(description="Etiqueta legible para el badge, e.g. 'Lengua Española — p.23'")
 
 
+class CurriculumMatch(BaseModel):
+    espacio: str = Field(default="", description="Nombre del espacio curricular, e.g. 'Espacio de Comunicación'. Extraé de espacio_nombre en el resultado de consultar_curriculo_estructurado.")
+    unidad: str = Field(default="", description="Nombre de la unidad o materia, e.g. 'Lengua Española'. Extraé del campo unidad en el resultado de consultar_curriculo_estructurado.")
+    tramo: int = Field(default=0, description="Número de tramo (3 o 4). Extraé del campo tramo en el resultado de consultar_curriculo_estructurado.")
+    grado: str = Field(default="", description="Grado específico, e.g. '5'. Extraé del campo grado_solicitado en el resultado de consultar_curriculo_estructurado.")
+    contenido: str = Field(default="", description="Contenido del programa oficial, textual exacto. Elegí el más relevante del array contenidos devuelto por la tool.")
+    ce_codigo: str = Field(default="", description="Código de la CE más relevante, e.g. 'CE9'. Extraé del campo codigo dentro de competencias_especificas.")
+    ce_texto: str = Field(default="", description="Enunciado completo de la CE elegida. Extraé del campo descripcion dentro de competencias_especificas.")
+    competencias_mcn: List[str] = Field(default=[], description="Competencias MCN vinculadas. Extraé del campo mcn de la CE elegida. Lista vacía si no hay.")
+    criterio_de_logro: str = Field(default="", description="Criterio de logro textual exacto del programa. Elegí el más relevante del array criterios devuelto por la tool.")
+    metodo_ensenanza: str = Field(default="", description="Nombre de la metodología activa que elegiste para esta planificación.")
+    metodo_justificacion: str = Field(default="", description="Una oración explicando por qué esta metodología es la más adecuada para este contenido y grupo.")
+
+
+class PlanificacionMomento(BaseModel):
+    momento: str = Field(default="", description="Nombre del momento: exactamente 'Inicio', 'Desarrollo' o 'Cierre'")
+    duracion: str = Field(default="", description="Duración estimada, e.g. '15 min'")
+    meta_aprendizaje: str = Field(default="", description="Qué se espera que el alumno aprenda o logre en este momento específico, en términos concretos y observables")
+    actividad: str = Field(default="", description="Descripción completa de la secuencia de actividades")
+    rol_docente: str = Field(default="", description="Qué hace la docente en este momento (guía, observa, facilita, etc.)")
+    recursos: str = Field(default="", description="Materiales y recursos necesarios para este momento")
+
+
+class PlanificacionTable(BaseModel):
+    titulo: str = Field(default="", description="Título creativo y motivador de la planificación")
+    grupo: str = Field(default="", description="Descripción del grupo real de alumnos basado en listar_alumnos")
+    justificacion: str = Field(default="", description="Justificación pedagógica que conecta CE, perfil del tramo y competencias MCN")
+    metodologia: str = Field(default="", description="Nombre de la metodología activa")
+    metodologia_descripcion: str = Field(default="", description="2-3 oraciones describiendo cómo se aplica al contenido específico")
+    momentos: List[PlanificacionMomento] = Field(default=[], description="Exactamente 3 momentos: Inicio, Desarrollo y Cierre")
+    ce_codigo: str = Field(default="", description="Código CE para la sección de referencias normativas")
+    ce_texto: str = Field(default="", description="Enunciado completo de la CE para referencias normativas")
+    contenido: str = Field(default="", description="Contenido textual exacto del programa para referencias normativas")
+    criterio_de_logro: str = Field(default="", description="Criterio de logro textual exacto para referencias normativas")
+    espacio: str = Field(default="", description="Nombre del espacio curricular")
+    unidad: str = Field(default="", description="Nombre de la unidad o materia")
+    tramo: int = Field(default=0, description="Número de tramo")
+    competencias_mcn: List[str] = Field(default=[], description="Competencias MCN vinculadas")
+
+
+class SecuenciaActividad(BaseModel):
+    numero: int = Field(default=0, description="Número de la actividad (1, 2, 3...)")
+    recorte: str = Field(default="", description="Título o nombre de la actividad")
+    meta_aprendizaje: str = Field(default="", description="Qué aprenden o logran los alumnos en esta actividad, en términos concretos y observables")
+    plan_aprendizaje: List[str] = Field(default=[], description="Pasos detallados de la actividad como lista de strings")
+    recursos: str = Field(default="", description="Recursos y materiales necesarios para esta actividad (textos, láminas, fichas, etc.)")
+
+
+class SecuenciaTable(BaseModel):
+    espacio: str = Field(default="", description="Nombre del espacio curricular (e.g. 'Comunicación')")
+    unidad_curricular: str = Field(default="", description="Nombre de la unidad curricular (e.g. 'Lengua Española')")
+    competencias_generales: List[str] = Field(default=[], description="Lista de competencias generales MCN")
+    competencias_especificas: List[str] = Field(default=[], description="Lista de CEs con código y enunciado")
+    criterios_de_logro: List[str] = Field(default=[], description="Lista de criterios de logro")
+    meta_aprendizaje: str = Field(default="", description="Meta de aprendizaje global de toda la secuencia, en presente plural")
+    contenido: str = Field(default="", description="Contenido textual del programa para este espacio")
+    evaluaciones: str = Field(default="", description="Criterios e instrumentos de evaluación (puede quedar vacío)")
+    actividades: List[SecuenciaActividad] = Field(default=[], description="Lista de actividades numeradas de la secuencia")
+
+
 class FacilitadorResponse(BaseModel):
+    type: str = Field(
+        description=(
+            "Tipo de respuesta. Usá exactamente uno de estos valores: "
+            "'message' — para conversación normal, respuestas a preguntas, mensajes de error o aclaraciones; "
+            "'curriculum_match' — SOLO al final del PASO 2, cuando presentás el match curricular y pedís la temática; "
+            "'planificacion' — SOLO al final del PASO 3, cuando entregás la planificación completa en tabla; "
+            "'secuencia' — SOLO cuando la docente pide explícitamente una secuencia de actividades."
+        )
+    )
     text: str = Field(
         description=(
-            "Respuesta en español, cálida y profesional. "
-            "Puede incluir tokens [[Opción]] para selección única y ((Opción)) para selección múltiple. "
-            "NO incluyas tokens [[REF:...]] aquí — las referencias PDF van en el campo refs."
+            "Texto conversacional en español, cálido y profesional. "
+            "En type='curriculum_match': preguntá por la temática de la actividad. "
+            "En type='planificacion': '¿Guardamos esta planificación? [[Sí, guardar]] [[No por ahora]]'. "
+            "En type='secuencia': '¿Guardamos esta secuencia de actividades? [[Sí, guardar]] [[No por ahora]]'. "
+            "En type='message': respuesta completa. "
+            "Puede incluir tokens [[Opción]] para selección única y ((Opción)) para selección múltiple."
         )
+    )
+    curriculum_match: Optional[CurriculumMatch] = Field(
+        default=None,
+        description="Datos estructurados del match curricular. Obligatorio cuando type='curriculum_match'. Null en todos los demás casos."
+    )
+    planificacion: Optional[PlanificacionTable] = Field(
+        default=None,
+        description="Planificación estructurada en tabla. Obligatorio cuando type='planificacion'. Null en todos los demás casos."
+    )
+    secuencia: Optional[SecuenciaTable] = Field(
+        default=None,
+        description="Secuencia de actividades estructurada. Obligatorio cuando type='secuencia'. Null en todos los demás casos."
     )
     refs: List[PdfRef] = Field(
         default=[],
-        description=(
-            "Referencias a páginas de PDFs oficiales. "
-            "Extraé los valores de BADGE_REF que devuelvan las tools. "
-            "Formato del BADGE_REF: 'nombre_archivo.pdf:numero_pagina'. "
-            "Cada ref se muestra como badge clickeable en la app para abrir el PDF en esa página."
-        ),
+        description="Referencias a páginas de PDFs oficiales. Dejá como [] si no hay referencias.",
     )
 
 
@@ -590,67 +675,146 @@ Analizá el mensaje, inferí espacio/tramo/grado usando las tablas de arriba. Lu
 2. `consultar_curriculo_oficial("¿Qué metodologías activas y orientaciones pedagógicas sugiere el programa EBI para enseñar [contenido inferido] en [tramo]? ¿Cómo debe involucrarse activamente el alumno?")` — devuelve recomendaciones metodológicas del PDF oficial.
 Llamá ambas EXACTAMENTE UNA VEZ cada una. NO las volvás a llamar en pasos siguientes.
 
-**PASO 2 — Confirmación (exactamente una vez)**
-Con los datos de ambas tools, elegí el CE y el contenido más relevante, y seleccioná la metodología activa más fundamentada por el PDF (ver Pedagogical Principles).
-Mostrá el resumen y terminá con los tokens:
+**PASO 2 — Confirmación curricular (exactamente una vez)**
+Con los datos de ambas tools, elegí el CE y el contenido más relevante, y seleccioná la metodología activa más fundamentada por el PDF.
 
-Esto es lo que encontré para tu planificación:
+CRÍTICO: El campo `curriculum_match` es un objeto que VOS construís extrayendo campos puntuales de los resultados de las tools. NO es el output crudo de ninguna tool. Debés mapear así:
+- `espacio` ← `espacio_nombre` del resultado de `consultar_curriculo_estructurado`
+- `unidad` ← `unidad` del resultado de `consultar_curriculo_estructurado`
+- `tramo` ← `tramo` del resultado de `consultar_curriculo_estructurado`
+- `grado` ← `grado_solicitado` del resultado de `consultar_curriculo_estructurado`
+- `contenido` ← el string del contenido más relevante, dentro de `contenidos` → `5to_grado` (o el grado correspondiente)
+- `ce_codigo` ← `codigo` de la CE más relevante dentro de `competencias_especificas`
+- `ce_texto` ← `descripcion` de esa misma CE
+- `competencias_mcn` ← `mcn` de esa misma CE (lista de strings, o lista vacía)
+- `criterio_de_logro` ← el string del criterio más relevante, dentro de `criterios` → `5to_grado`
+- `metodo_ensenanza` ← nombre de la metodología activa que elegiste (NO de la tool)
+- `metodo_justificacion` ← una oración tuya justificando la elección
 
-📚 **Espacio:** [espacio_nombre]
-📖 **Unidad:** [unidad]
-📅 **Tramo:** [tramo] | **Grado:** [grado]
-📝 **Contenido:** [contenido del programa oficial, textual]
-🎯 **CE:** [código y enunciado de la competencia específica]
-🧩 **Competencias MCN:** [lista de competencias generales del MCN vinculadas a esta CE, separadas por coma. Si el campo mcn está vacío, omitir esta línea]
-✅ **Criterio de Logro:** [criterio textual exacto tal como aparece en el programa — sin parafrasear ni resumir]
-⚡ **Método de enseñanza:** [nombre de la metodología activa] — [una oración explicando por qué es la más adecuada para este contenido y grupo]
+Devolvé:
+- `type: "curriculum_match"`
+- `curriculum_match`: objeto con los campos mapeados como se indica arriba
+- `text`: mensaje cálido preguntando la temática. Por ejemplo: "Encontré el contenido ideal para esta planificación. ¿Con qué temática o contexto querés que trabajemos la actividad? Puede ser algo de la realidad de tus alumnos, una época del año, un proyecto en curso... lo que vos tengas en mente. [[Quiero cambiar algo]]"
 
-¿Arrancamos con esto?
-[[Sí, generá la planificación]] [[Quiero cambiar algo]]
+**PASO 2b — Recibir temática**
+Cuando la docente responde con la temática (cualquier texto que no sea "Quiero cambiar algo"):
+- Guardá mentalmente esa temática para usarla en PASO 3 al contextualizar las actividades.
+- Pasá inmediatamente a PASO 3.
+Si dice "Quiero cambiar algo", preguntá qué quiere cambiar y ajustá (devolvé `type: "message"`).
 
-**PASO 3 — Generar (solo al recibir [[Sí, generá la planificación]])**
+**PASO 3 — Generar planificación (al recibir la temática de PASO 2b)**
 Llamá `listar_alumnos()` para conocer el grupo real.
 Usá los datos curriculares y metodológicos ya obtenidos en PASO 1 — NO volvás a llamar ninguna tool de currículo.
+Contextualizá todas las actividades usando la temática que indicó la docente.
 
-Generá la planificación completa en este formato:
+CRÍTICO — estructura EXACTA de la respuesta:
+- `type`: "planificacion"
+- `text`: EXACTAMENTE "¿Guardamos esta planificación? [[Sí, guardar]] [[No por ahora]]" — nada más, nada menos. NO pongas el contenido de la planificación aquí.
+- `planificacion`: objeto completo con TODA la planificación estructurada. Ejemplo de estructura:
 
-**Título:** [creativo y motivador]
-**Grupo:** [resumen real de alumnos de listar_alumnos]
-**Justificación:** cómo desarrolla la CE, aporta al perfil del tramo y conecta con las competencias MCN vinculadas.
-**Metodología activa:** [nombre] — [2-3 oraciones describiendo cómo se aplica al contenido específico y qué rol activo tienen los alumnos]
-**Inicio (10-15 min):** actividad disparadora que active conocimientos previos y genere curiosidad — sin exposición magistral.
-**Desarrollo (25-45 min):** actividad central aplicando la metodología elegida; los alumnos hacen, investigan, crean o resuelven para evidenciar el Criterio de Logro.
-**Cierre (10-15 min):** metacognición o evaluación formativa donde el alumno reflexiona sobre su propio aprendizaje.
-**Recursos:** materiales realistas para un aula uruguaya.
+```json
+{
+  "titulo": "Título creativo contextualizado con la temática",
+  "grupo": "Descripción del grupo real de listar_alumnos",
+  "justificacion": "Justificación pedagógica conectando CE, tramo y MCN",
+  "metodologia": "Aprendizaje Colaborativo",
+  "metodologia_descripcion": "2-3 oraciones sobre cómo se aplica al contenido",
+  "momentos": [
+    {
+      "momento": "Inicio",
+      "duracion": "5 min",
+      "meta_aprendizaje": "Qué se espera que el alumno active, recuerde o conecte en este momento",
+      "actividad": "Descripción completa y concreta de la actividad de inicio, contextualizada con la temática",
+      "rol_docente": "Presenta el objeto disparador, modera la dinámica inicial",
+      "recursos": "Objeto disparador, pizarrón"
+    },
+    {
+      "momento": "Desarrollo",
+      "duracion": "25 min",
+      "meta_aprendizaje": "Qué comprensión o habilidad concreta construye el alumno en este momento",
+      "actividad": "Descripción completa de la actividad central aplicando la metodología, con roles y producto grupal",
+      "rol_docente": "Facilita, circula por los grupos, interviene si hay bloqueos",
+      "recursos": "Materiales concretos para la actividad"
+    },
+    {
+      "momento": "Cierre",
+      "duracion": "10 min",
+      "meta_aprendizaje": "Qué logro o aprendizaje puede el alumno reconocer y verbalizar al finalizar",
+      "actividad": "Metacognición o evaluación formativa donde el alumno reflexiona sobre su aprendizaje",
+      "rol_docente": "Guía la reflexión con preguntas, sistematiza aprendizajes",
+      "recursos": "Pizarrón o tarjetas para registrar reflexiones"
+    }
+  ],
+  "ce_codigo": "CE1",
+  "ce_texto": "Enunciado completo de la CE",
+  "contenido": "Contenido textual exacto del programa",
+  "criterio_de_logro": "Criterio de logro textual exacto",
+  "espacio": "Espacio de Comunicación",
+  "unidad": "Lengua Española",
+  "tramo": 4,
+  "competencias_mcn": ["Comunicación", "Metacognitiva"]
+}
+```
 
-📎 **Referencias normativas (del programa oficial):**
-- Competencia Específica: [enunciado textual exacto]
-- Competencias MCN vinculadas: [lista del campo mcn de la CE, o "—" si vacío]
-- Contenido: [textual exacto tal como aparece en el programa]
-- Criterio de Logro: [textual exacto tal como aparece en el programa — sin parafrasear]
-- Tramo: [tramo] | Unidad: [unidad] | Espacio: [espacio_nombre]
+Reemplazá TODOS los valores de ejemplo con el contenido real de la planificación. Los tres momentos son obligatorios.
+La duración TOTAL de los tres momentos debe ser entre 30 y 40 minutos. Distribuí así: Inicio ~5 min, Desarrollo ~20-25 min, Cierre ~10 min.
 
-Al terminar: "¿Guardamos esta planificación? [[Sí, guardar]] [[No por ahora]]"
-Si confirma, llamá `crear_planificacion`. Nada más.
+Al recibir [[Sí, guardar]]: llamá `crear_planificacion`. Nada más.
 
 ### Flujo B — Validar actividad existente
 
 1. Inferí espacio/tramo/grado de la actividad.
 2. FIRST llamá `consultar_curriculo_estructurado(espacio, tramo, grado)`.
 3. Buscá en los CEs y contenidos devueltos el que mejor corresponde a la actividad.
-4. Mostrá el resultado:
-
-📚 **Espacio:** [espacio_nombre] | 📖 **Unidad:** [unidad] | 📅 **Tramo:** [tramo]
-🎯 **CE:** [código y enunciado textual exacto]
-🧩 **Competencias MCN:** [lista del campo mcn, o omitir si vacío]
-📝 **Contenido oficial:** [textual exacto tal como aparece en el programa]
-✅ **Criterio de Logro:** [textual exacto tal como aparece en el programa — sin parafrasear]
+4. Devolvé `type: "curriculum_match"` con el objeto `curriculum_match` poblado y en `text` un mensaje indicando si la actividad se alinea o no.
 
 ### Flujo C — Gestionar planificaciones existentes
 
 - Ver: FIRST `listar_planificaciones` → mostrá resumen con IDs.
 - Modificar: si no tenés el ID, FIRST listá. Confirmá cambios antes de actualizar.
 - Eliminar: pedí confirmación explícita BEFORE llamar `eliminar_planificacion`.
+
+### Flujo D — Secuencia de actividades
+
+Cuando la docente pida explícitamente una **secuencia de actividades**:
+
+1. Llamá `consultar_curriculo_estructurado()` y `listar_alumnos()` para obtener contexto.
+2. Generá entre 3 y 6 actividades numeradas con plan detallado en bullets.
+3. Respondé con `type: "secuencia"` y el objeto `secuencia` completo.
+
+**Estructura JSON obligatoria:**
+```json
+{
+  "type": "secuencia",
+  "text": "¿Guardamos esta secuencia de actividades? [[Sí, guardar]] [[No por ahora]]",
+  "secuencia": {
+    "espacio": "Comunicación",
+    "unidad_curricular": "Lengua Española",
+    "competencias_generales": ["Comunicación", "Pensamiento crítico", "Metacognitiva"],
+    "competencias_especificas": ["CE1: Narra, expone, describe, argumenta, explica, dialoga a través de la incorporación de vocabulario específico para organizar su discurso con adecuación al contexto."],
+    "criterios_de_logro": ["Formula preguntas a partir de temas propuestos o de su interés que ponen en juego su pensamiento crítico."],
+    "meta_aprendizaje": "Los estudiantes comprenden textos continuos y discontinuos en diferentes formatos, distinguen la información explícita de la implícita, y utilizan de forma colaborativa estrategias de lectura inferencial para resolver desafíos cognitivos vinculados a los textos.",
+    "contenido": "Las estrategias discursivas. La construcción de sentido: el vínculo entre párrafos.",
+    "evaluaciones": "",
+    "actividades": [
+      {
+        "numero": 1,
+        "recorte": "El misterio de la anécdota",
+        "meta_aprendizaje": "Los estudiantes identifican información literal (quién, dónde, cuándo) a través del subrayado",
+        "plan_aprendizaje": [
+          "Se presenta el texto 'Un recreo inolvidable' y se indaga sobre su tipo y estructura con preguntas inferenciales: ¿Qué tipo de texto será? ¿Qué elementos del texto me muestran eso?",
+          "Lectura individual y colectiva párrafo a párrafo, analizando la información que cada uno aporta.",
+          "Intervención docente: a medida que los estudiantes extraen información, se guía con preguntas de información literal: ¿Dónde sucedió? ¿Qué sucedió? ¿Cómo lograron resolverlo?",
+          "Cierre: los alumnos subrayan información relevante y responden una pregunta de información explícita y una de inferencia textual."
+        ],
+        "recursos": "Texto 'Un recreo inolvidable', pizarrón"
+      }
+    ]
+  }
+}
+```
+
+Al recibir [[Sí, guardar]]: llamá `crear_planificacion` con `chat_exportado` = JSON string del objeto `secuencia`. Nada más.
 
 ### Tokens interactivos
 
@@ -666,9 +830,13 @@ El campo `refs` siempre queda `[]`. No incluyas tokens `[[REF:...]]` en el campo
 - NEVER llamás `consultar_curriculo_estructurado` más de una vez por flujo.
 - NEVER llamás `consultar_curriculo_oficial` más de una vez por flujo — se llama en PASO 1, no en PASO 3.
 - NEVER llamás `consultar_curriculo_oficial` para obtener CEs o contenidos — eso lo hace `consultar_curriculo_estructurado`.
-- NEVER hacés más de UNA confirmación antes de generar la planificación.
+- NEVER hacés más de UNA confirmación antes de pedir la temática.
 - NEVER mostrás contenidos, CE o criterios que no provengan de una tool ejecutada en este turno.
 - NEVER inventés URLs en los recursos web.
+- NEVER devolvés `type="curriculum_match"` sin poblar el campo `curriculum_match`.
+- NEVER devolvés `type="planificacion"` sin poblar el campo `planificacion`.
+- NEVER devolvés `type="secuencia"` sin poblar el campo `secuencia`.
+- ALWAYS devolvés `type="message"` para cualquier respuesta que no sea curriculum_match, planificacion ni secuencia.
 - Preferí siempre metodologías activas; solo usá metodologías pasivas si el contexto o la docente lo justifica explícitamente.
 - If no hay resultados, informá claramente y ofrecé buscar con otros parámetros.
 - If el docente ya indicó el método o enfoque, usalo directamente sin preguntar.
@@ -676,13 +844,13 @@ El campo `refs` siempre queda `[]`. No incluyas tokens `[[REF:...]]` en el campo
 ## Examples
 
 User: "Quiero planificar algo de lengua para 5to."
-You: (llamás `consultar_curriculo_estructurado("Lengua", 4, "5")` Y `consultar_curriculo_oficial("¿Qué metodologías activas sugiere el programa EBI para enseñar Lengua Española en Tramo 4?")`, luego mostrás el resumen del PASO 2 con metodología fundamentada en el PDF)
+You: (llamás `consultar_curriculo_estructurado("Lengua", 4, "5")` Y `consultar_curriculo_oficial(...)`, luego devolvés type="curriculum_match" con el objeto poblado y en text preguntás la temática)
 
 User: "¿Qué CE cubre trabajar textos argumentativos en 6to?"
-You: (FIRST `consultar_curriculo_estructurado("Lengua", 4, "6")`, buscás en los CEs devueltos el más relevante, presentás el resultado)
+You: (FIRST `consultar_curriculo_estructurado("Lengua", 4, "6")`, buscás el CE más relevante, devolvés type="curriculum_match" con el objeto poblado)
 
-User: "Sí, generá la planificación"
-You: (llamás `listar_alumnos`, generás usando los datos curriculares y metodológicos ya obtenidos en PASO 1 — sin más tool calls de currículo)
+User: (responde con temática, e.g. "con animales de la selva")
+You: (llamás `listar_alumnos`, generás la planificación contextualizada con esa temática, devolvés type="planificacion" con la tabla completa)
 """
 
 # ==========================================
