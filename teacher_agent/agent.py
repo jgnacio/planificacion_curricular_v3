@@ -204,6 +204,99 @@ def actualizar_planificacion(
         return {"status": "error", "error_message": str(e)}
 
 
+def crear_alumno(
+    tool_context: ToolContext,
+    nombre_completo: str,
+    grado: str = "",
+    nivel: str = "",
+    fecha_nacimiento: str = "",
+    notas: str = "",
+) -> dict:
+    """
+    Registra un nuevo alumno en la base de datos del docente.
+    Usá esta herramienta cuando la docente quiera agregar un alumno a su grupo.
+    El campo 'notas' es fundamental: registrá aquí cualquier necesidad especial,
+    diagnóstico, apoyo requerido o singularidad del alumno que deba tenerse en cuenta
+    al planificar (ej: dificultades de lectura, TEA, hipoacusia, altas capacidades, etc.).
+    Siempre confirmá los datos con la docente antes de guardar.
+    """
+    user_id = tool_context.state.get("user_id", "")
+    payload = {
+        "nombre_completo": nombre_completo,
+        "grado": grado or None,
+        "nivel": nivel or None,
+        "fecha_nacimiento": fecha_nacimiento or None,
+        "notas": notas or None,
+    }
+    try:
+        r = httpx.post(
+            f"{INTERNAL_API_URL}/alumnos/",
+            params={"user_id": user_id},
+            headers=_internal_headers(user_id),
+            json=payload,
+            timeout=10.0,
+        )
+        r.raise_for_status()
+        alumno = r.json()
+        return {
+            "status": "success",
+            "alumno_id": alumno["id"],
+            "nombre": alumno["nombre_completo"],
+            "message": f"Alumno '{alumno['nombre_completo']}' registrado con ID {alumno['id']}.",
+        }
+    except Exception as e:
+        return {"status": "error", "error_message": str(e)}
+
+
+def actualizar_alumno(
+    tool_context: ToolContext,
+    alumno_id: int,
+    nombre_completo: str = "",
+    grado: str = "",
+    nivel: str = "",
+    fecha_nacimiento: str = "",
+    notas: str = "",
+) -> dict:
+    """
+    Actualiza los datos de un alumno existente. Solo modifica los campos con valor no vacío.
+    El campo 'notas' es especialmente útil para registrar o actualizar necesidades especiales.
+    Usá listar_alumnos primero para obtener el ID correcto.
+    Siempre confirmá los cambios con la docente antes de guardar.
+    """
+    user_id = tool_context.state.get("user_id", "")
+    payload = {k: v for k, v in {
+        "nombre_completo": nombre_completo or None,
+        "grado": grado or None,
+        "nivel": nivel or None,
+        "fecha_nacimiento": fecha_nacimiento or None,
+        "notas": notas or None,
+    }.items() if v is not None}
+
+    if not payload:
+        return {"status": "error", "error_message": "No se proporcionaron campos para actualizar."}
+
+    try:
+        r = httpx.put(
+            f"{INTERNAL_API_URL}/alumnos/{alumno_id}",
+            params={"user_id": user_id},
+            headers=_internal_headers(user_id),
+            json=payload,
+            timeout=10.0,
+        )
+        if r.status_code == 404:
+            return {"status": "error", "error_message": f"No existe alumno con ID {alumno_id}."}
+        r.raise_for_status()
+        alumno = r.json()
+        return {
+            "status": "success",
+            "alumno_id": alumno["id"],
+            "nombre": alumno["nombre_completo"],
+            "message": f"Alumno ID {alumno['id']} actualizado correctamente.",
+        }
+    except Exception as e:
+        return {"status": "error", "error_message": str(e)}
+
+
 def buscar_en_internet(consulta: str) -> dict:
     """
     Busca información pedagógica en internet usando DuckDuckGo.
@@ -669,11 +762,17 @@ Palabras clave → Espacio / Unidad:
 
 ### Flujo A — Nueva planificación
 
-**PASO 1 — Consultar fuentes (DOS llamadas, siempre juntas)**
-Analizá el mensaje, inferí espacio/tramo/grado usando las tablas de arriba. Luego llamá:
+**PASO 1 — Consultar fuentes (TRES llamadas, siempre juntas)**
+Analizá el mensaje, inferí espacio/tramo/grado usando las tablas de arriba. Luego llamá las tres simultáneamente:
 1. `consultar_curriculo_estructurado(espacio, tramo, grado)` — devuelve CEs, contenidos y criterios.
 2. `consultar_curriculo_oficial("¿Qué metodologías activas y orientaciones pedagógicas sugiere el programa EBI para enseñar [contenido inferido] en [tramo]? ¿Cómo debe involucrarse activamente el alumno?")` — devuelve recomendaciones metodológicas del PDF oficial.
-Llamá ambas EXACTAMENTE UNA VEZ cada una. NO las volvás a llamar en pasos siguientes.
+3. `listar_alumnos()` — devuelve el grupo real de la docente.
+Llamá las tres EXACTAMENTE UNA VEZ cada una. NO las volvás a llamar en pasos siguientes.
+
+**MANEJO DEL GRUPO — CRÍTICO**
+Después de llamar `listar_alumnos()` en PASO 1:
+- Si `total == 0`: antes de continuar con el flujo, informá a la docente: "Todavía no tenés alumnos registrados en tu grupo. Para poder personalizar la planificación — especialmente si trabajás con estudiantes con necesidades especiales o multigrado — es importante que registres a tus alumnos con sus singularidades. ¿Querés que te ayude a registrarlos ahora? [[Sí, registrar alumnos]] [[Continuar sin alumnos]]". Si elige registrar, pasá a Flujo E antes de continuar con la planificación.
+- Si `total > 0`: usá la lista completa para construir el campo `grupo` en la planificación, mencionando cantidad, grados y cualquier nota relevante de los alumnos. Si el request es sobre inclusión o dificultades especiales, listá explícitamente los alumnos que tienen notas registradas y tenélas en cuenta en las actividades.
 
 **PASO 2 — Confirmación curricular (exactamente una vez)**
 Con los datos de ambas tools, elegí el CE y el contenido más relevante, y seleccioná la metodología activa más fundamentada por el PDF.
@@ -703,9 +802,10 @@ Cuando la docente responde con la temática (cualquier texto que no sea "Quiero 
 Si dice "Quiero cambiar algo", preguntá qué quiere cambiar y ajustá (devolvé `type: "message"`).
 
 **PASO 3 — Generar planificación (al recibir la temática de PASO 2b)**
-Llamá `listar_alumnos()` para conocer el grupo real.
+Ya tenés los datos del grupo de `listar_alumnos()` obtenidos en PASO 1 — NO la volvás a llamar.
 Usá los datos curriculares y metodológicos ya obtenidos en PASO 1 — NO volvás a llamar ninguna tool de currículo.
 Contextualizá todas las actividades usando la temática que indicó la docente.
+Si hay alumnos con necesidades especiales en las notas, incorporá diferenciaciones concretas en las actividades.
 
 CRÍTICO — estructura EXACTA de la respuesta:
 - `type`: "planificacion"
@@ -774,6 +874,25 @@ Al recibir [[Sí, guardar]]: llamá `crear_planificacion`. Nada más.
 - Modificar: si no tenés el ID, FIRST listá. Confirmá cambios antes de actualizar.
 - Eliminar: pedí confirmación explícita BEFORE llamar `eliminar_planificacion`.
 
+### Flujo E — Gestionar alumnos
+
+**Registrar alumnos:**
+Cuando la docente quiera registrar un alumno (ya sea por iniciativa propia o porque se lo sugeriste):
+1. Pedí el nombre completo, grado/nivel y cualquier singularidad relevante (necesidades especiales, apoyos, diagnósticos, etc.).
+2. Confirmá los datos antes de guardar: "¿Guardamos a [nombre] en [grado] con las siguientes notas: [notas]? [[Sí, guardar]] [[Quiero cambiar algo]]"
+3. Llamá `crear_alumno(nombre_completo, grado, nivel, notas)`.
+4. Preguntá si quiere registrar otro alumno: "¿Querés agregar otro alumno? [[Sí]] [[No, continuar]]"
+5. Cuando termine de registrar alumnos, retomá el flujo de planificación si estabas en uno.
+
+**Actualizar alumno:**
+Cuando la docente quiera modificar datos de un alumno:
+1. Si no tenés los alumnos cargados, llamá `listar_alumnos()` y mostrá la lista.
+2. Identificá el alumno a actualizar (pedí confirmación del ID si hay dudas).
+3. Confirmá los cambios antes de guardar.
+4. Llamá `actualizar_alumno(alumno_id, ...)`.
+
+**El campo `notas` es la clave pedagógica**: es donde la docente puede registrar TEA, hipoacusia, dificultades de lectura, altas capacidades, soporte de maestra comunitaria, o cualquier necesidad de apoyo. Siempre invitá a completarlo cuando registren un alumno.
+
 ### Flujo D — Secuencia de actividades
 
 Cuando la docente pida explícitamente una **secuencia de actividades**:
@@ -830,6 +949,10 @@ El campo `refs` siempre queda `[]`. No incluyas tokens `[[REF:...]]` en el campo
 - NEVER llamás `consultar_curriculo_estructurado` más de una vez por flujo.
 - NEVER llamás `consultar_curriculo_oficial` más de una vez por flujo — se llama en PASO 1, no en PASO 3.
 - NEVER llamás `consultar_curriculo_oficial` para obtener CEs o contenidos — eso lo hace `consultar_curriculo_estructurado`.
+- NEVER llamás `listar_alumnos` más de una vez por flujo de planificación — se llama en PASO 1.
+- NEVER generás una planificación para inclusión o dificultades especiales sin antes haber chequeado `listar_alumnos`.
+- NEVER registrás un alumno sin confirmar los datos con la docente primero.
+- ALWAYS informás cuando no hay alumnos registrados y ofrecés ayudar a registrarlos.
 - NEVER hacés más de UNA confirmación antes de pedir la temática.
 - NEVER mostrás contenidos, CE o criterios que no provengan de una tool ejecutada en este turno.
 - NEVER inventés URLs en los recursos web.
@@ -869,6 +992,8 @@ root_agent = Agent(
         consultar_curriculo_oficial,
         buscar_en_internet,
         listar_alumnos,
+        crear_alumno,
+        actualizar_alumno,
         listar_planificaciones,
         crear_planificacion,
         actualizar_planificacion,
