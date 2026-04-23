@@ -1,3 +1,4 @@
+import asyncio
 import os
 import json
 import logging
@@ -71,14 +72,27 @@ router = APIRouter(prefix="/agente", tags=["agente"])
 # ==========================================
 
 _TOOL_LABELS: dict[str, str] = {
+    # Bibliotecario
     "consultar_curriculo_estructurado": "Consultando currículo EBI…",
     "consultar_curriculo_oficial":      "Leyendo programa oficial…",
+    # Alumnos
     "listar_alumnos":                   "Consultando lista de alumnos…",
+    "crear_alumno":                     "Registrando alumno…",
+    "actualizar_alumno":                "Actualizando alumno…",
+    "eliminar_alumno":                  "Eliminando alumno…",
+    # Planificaciones
     "listar_planificaciones":           "Buscando planificaciones…",
     "crear_planificacion":              "Guardando planificación…",
     "actualizar_planificacion":         "Actualizando planificación…",
     "eliminar_planificacion":           "Eliminando planificación…",
-    "buscar_en_internet":               "Buscando en internet…",
+    # Creativo
+    "buscar_en_internet":               "Buscando ideas pedagógicas…",
+    # Sub-agentes (delegaciones del orquestador)
+    "agente_alumnos":                   "Consultando gestión de alumnos…",
+    "agente_planificaciones":           "Gestionando planificaciones…",
+    "agente_planificador_normativo":    "Consultando currículo oficial…",
+    "agente_inclusion":                 "Analizando grupo y adaptaciones…",
+    "agente_creativo":                  "Buscando ideas creativas…",
 }
 
 # ==========================================
@@ -159,7 +173,7 @@ async def _stream_local(body: ChatRequest, user_id: str):
         session_id=sid,
         new_message=Content(parts=[Part(text=body.message)]),
     ):
-        # Detectar tool calls y emitir label amigable
+        # Detectar tool calls y delegaciones a sub-agentes — emitir label amigable
         if event.content and event.content.parts:
             for part in event.content.parts:
                 fn = getattr(part, "function_call", None)
@@ -171,6 +185,20 @@ async def _stream_local(body: ChatRequest, user_id: str):
             if event.content and event.content.parts:
                 response_text = getattr(event.content.parts[0], "text", "") or ""
             break
+
+    # Stream token a token el campo `text` del JSON de respuesta
+    # Esto da el efecto visual de ChatGPT mientras la respuesta estructurada llega completa al final
+    try:
+        parsed = json.loads(response_text)
+        text_to_stream = parsed.get("text", "")
+        if text_to_stream:
+            words = text_to_stream.split(" ")
+            for i, word in enumerate(words):
+                chunk = word + (" " if i < len(words) - 1 else "")
+                yield {"type": "token", "text": chunk}
+                await asyncio.sleep(0.022)  # ~45 palabras/seg
+    except Exception:
+        pass  # Si no es JSON válido, el done lo maneja
 
     yield {"type": "done", "session_id": sid, "response": response_text}
 

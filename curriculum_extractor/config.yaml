@@ -1,0 +1,47 @@
+pdfs:
+  ciclo1: "pdfs/Compilación Programas 1er Ciclo - 2024.pdf"
+  ciclo2: "pdfs/Compilación Programas 2do Ciclo.pdf"
+
+output_path: "data/curriculum_structure.json"
+
+open_notebook:
+  url: "http://localhost:5055"
+  notebook_id: "notebook:plf3f24qx6nui9zmn3vl"
+  model_id: "model:fi2x3hf9fvjdxl25ljwt"
+
+tramos:
+  tramo_1:
+    label: "Tramo 1 - Educación Inicial"
+    ciclo: ciclo1
+    grados: ["nivel_3_anios", "nivel_4_anios", "nivel_5_anios"]
+  tramo_2:
+    label: "Tramo 2 - Primer ciclo de Educación Primaria"
+    ciclo: ciclo1
+    grados: ["1er_grado", "2do_grado"]
+  tramo_3:
+    label: "Tramo 3 - Segundo ciclo de Educación Primaria"
+    ciclo: ciclo2
+    grados: ["3er_grado", "4to_grado"]
+  tramo_4:
+    label: "Tramo 4 - Tercer ciclo de Educación Primaria"
+    ciclo: ciclo2
+    grados: ["5to_grado", "6to_grado"]
+
+materias:
+  - matematica
+  - lengua_espanola
+  - lenguas_extranjeras
+  - historia
+  - geografia
+  - formacion_ciudadania
+  - fisica_quimica
+  - ciencias_ambiente
+  - ciencias_tierra
+  - artes_visuales
+  - musica
+  - literatura
+  - teatro
+  - danza
+  - conciencia_corporal
+  - educacion_fisica
+  - computacion

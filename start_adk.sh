@@ -7,11 +7,9 @@ set -euo pipefail
 
 cd "$(dirname "$0")"
 
-source .venv/bin/activate
-
 export APP_ENV=dev
 
-adk api_server \
+uv run adk api_server \
   --host 0.0.0.0 \
   --port 8000 \
   --allow_origins "*" \

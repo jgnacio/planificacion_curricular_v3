@@ -1,18 +1,17 @@
 #!/usr/bin/env bash
 # ─────────────────────────────────────────────
-# start_all.sh — Levanta todo el backend en paralelo
+# start_all.sh — Levanta el backend
 #
 # Servicios:
-#   Puerto 8000 → ADK agent server  (chat conversacional)
-#   Puerto 8001 → FastAPI REST      (planificaciones, alumnos, curriculum)
+#   Puerto 8001 → FastAPI REST (agente + planificaciones + alumnos + curriculum)
 #
 # Prerequisitos:
 #   - Open Notebook corriendo (docker compose up -d)
-#   - .env con GOOGLE_API_KEY y GOOGLE_GENAI_USE_VERTEXAI=1
+#   - .env con GOOGLE_API_KEY
 #
 # Uso:
-#   ./start_all.sh          → inicia todo
-#   Ctrl+C                  → detiene ambos servidores
+#   ./start_all.sh          → inicia
+#   Ctrl+C                  → detiene
 # ─────────────────────────────────────────────
 set -euo pipefail
 
@@ -27,8 +26,8 @@ NC='\033[0m'
 # ── Verificaciones previas ────────────────────
 echo -e "${YELLOW}Verificando prerequisitos...${NC}"
 
-if [ ! -f ".venv/bin/activate" ]; then
-  echo -e "${RED}ERROR: No existe .venv — ejecutá: python -m venv .venv && pip install -r requirements.txt${NC}"
+if ! command -v uv &>/dev/null; then
+  echo -e "${RED}ERROR: uv no está instalado — https://docs.astral.sh/uv/getting-started/installation/${NC}"
   exit 1
 fi
 
@@ -37,8 +36,7 @@ if [ ! -f ".env" ]; then
   exit 1
 fi
 
-source .venv/bin/activate
-source .env 2>/dev/null || true
+set -a; source .env; set +a
 
 if [ -z "${GOOGLE_API_KEY:-}" ]; then
   echo -e "${RED}ERROR: GOOGLE_API_KEY no está en .env${NC}"
@@ -49,33 +47,22 @@ if [ -z "${GOOGLE_GENAI_USE_VERTEXAI:-}" ]; then
   echo -e "${YELLOW}AVISO: GOOGLE_GENAI_USE_VERTEXAI no está en .env — el agente usará Gemini API free tier${NC}"
 fi
 
-echo -e "${GREEN}OK — .env y .venv listos${NC}"
+echo -e "${GREEN}OK — .env y uv listos${NC}"
 echo ""
 
 export APP_ENV=dev
 
 # ── Cleanup al salir ──────────────────────────
 cleanup() {
-  echo -e "\n${YELLOW}Deteniendo servidores...${NC}"
-  kill "${ADK_PID:-}" "${API_PID:-}" 2>/dev/null || true
+  echo -e "\n${YELLOW}Deteniendo servidor...${NC}"
+  kill "${API_PID:-}" 2>/dev/null || true
   echo -e "${GREEN}Listo.${NC}"
 }
 trap cleanup EXIT INT TERM
 
-# ── ADK server — puerto 8000 ──────────────────
-echo -e "${GREEN}[ADK]${NC} Iniciando agent server en puerto 8000..."
-adk api_server \
-  --host 0.0.0.0 \
-  --port 8000 \
-  --allow_origins "*" \
-  --auto_create_session \
-  --reload_agents \
-  . &
-ADK_PID=$!
-
 # ── FastAPI — puerto 8001 ─────────────────────
 echo -e "${GREEN}[API]${NC} Iniciando FastAPI en puerto 8001..."
-uvicorn api.main:app \
+uv run uvicorn api.main:app \
   --host 0.0.0.0 \
   --port 8001 \
   --reload &
@@ -83,10 +70,9 @@ API_PID=$!
 
 echo ""
 echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${GREEN} ADK agent server  →  http://0.0.0.0:8000${NC}"
-echo -e "${GREEN} FastAPI REST       →  http://0.0.0.0:8001${NC}"
+echo -e "${GREEN} FastAPI REST  →  http://0.0.0.0:8001${NC}"
 echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e " Presioná ${YELLOW}Ctrl+C${NC} para detener todo."
+echo -e " Presioná ${YELLOW}Ctrl+C${NC} para detener."
 echo ""
 
 wait
