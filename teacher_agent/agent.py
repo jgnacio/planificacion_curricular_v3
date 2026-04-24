@@ -70,7 +70,7 @@ def listar_alumnos(tool_context: ToolContext, nivel: str = "", grado: str = "") 
             f"{INTERNAL_API_URL}/alumnos/",
             params=params,
             headers=_internal_headers(user_id),
-            timeout=10.0,
+            timeout=60.0,
         )
         r.raise_for_status()
         alumnos = r.json()
@@ -94,7 +94,7 @@ def listar_planificaciones(tool_context: ToolContext) -> dict:
             f"{INTERNAL_API_URL}/planificaciones/",
             params={"user_id": user_id},
             headers=_internal_headers(user_id),
-            timeout=10.0,
+            timeout=60.0,
         )
         r.raise_for_status()
         plans = r.json()
@@ -145,7 +145,7 @@ def crear_planificacion(
             params={"user_id": user_id},
             headers=_internal_headers(user_id),
             json=payload,
-            timeout=10.0,
+            timeout=60.0,
         )
         r.raise_for_status()
         plan = r.json()
@@ -190,7 +190,7 @@ def actualizar_planificacion(
             params={"user_id": user_id},
             headers=_internal_headers(user_id),
             json=payload,
-            timeout=10.0,
+            timeout=60.0,
         )
         r.raise_for_status()
         plan = r.json()
@@ -234,7 +234,7 @@ def crear_alumno(
             params={"user_id": user_id},
             headers=_internal_headers(user_id),
             json=payload,
-            timeout=10.0,
+            timeout=60.0,
         )
         r.raise_for_status()
         alumno = r.json()
@@ -281,7 +281,7 @@ def actualizar_alumno(
             params={"user_id": user_id},
             headers=_internal_headers(user_id),
             json=payload,
-            timeout=10.0,
+            timeout=60.0,
         )
         if r.status_code == 404:
             return {"status": "error", "error_message": f"No existe alumno con ID {alumno_id}."}
@@ -315,7 +315,7 @@ def eliminar_alumno(tool_context: ToolContext, alumno_id: int) -> dict:
             f"{INTERNAL_API_URL}/alumnos/{alumno_id}",
             params={"user_id": user_id},
             headers=_internal_headers(user_id),
-            timeout=10.0,
+            timeout=60.0,
         )
         if r.status_code == 404:
             return {"status": "error", "error_message": f"No existe alumno con ID {alumno_id}."}
@@ -412,7 +412,7 @@ def eliminar_planificacion(tool_context: ToolContext, planificacion_id: int) -> 
             f"{INTERNAL_API_URL}/planificaciones/{planificacion_id}",
             params={"user_id": user_id},
             headers=_internal_headers(user_id),
-            timeout=10.0,
+            timeout=60.0,
         )
         if r.status_code == 404:
             return {"status": "error", "error_message": f"No existe planificación con ID {planificacion_id}."}

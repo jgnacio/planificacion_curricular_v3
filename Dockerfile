@@ -7,16 +7,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libffi-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# API deps
-COPY api/requirements.txt api/requirements.txt
-RUN pip install --no-cache-dir -r api/requirements.txt
+# Instalar uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
-# Agent deps (not in api/requirements.txt)
-RUN pip install --no-cache-dir \
-    google-adk \
-    google-cloud-aiplatform[agent_engines] \
-    duckduckgo-search \
-    beautifulsoup4
+# Copiar lockfile y pyproject primero (cache layer)
+COPY pyproject.toml uv.lock ./
+
+# Instalar deps desde el lockfile
+RUN uv sync --frozen --no-install-project --no-dev
 
 # Application source
 COPY api/ api/
@@ -27,4 +25,6 @@ RUN mkdir -p pdfs
 
 EXPOSE 8080
 
-CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8080"]
+ENV APP_MODULE=api.main:app
+
+CMD ["/bin/sh", "-c", ".venv/bin/uvicorn ${APP_MODULE} --host 0.0.0.0 --port 8080"]
