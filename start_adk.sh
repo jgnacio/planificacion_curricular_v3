@@ -11,7 +11,7 @@ export APP_ENV=dev
 
 uv run adk api_server \
   --host 0.0.0.0 \
-  --port 8000 \
+  --port 8001 \
   --allow_origins "*" \
   --auto_create_session \
   --reload_agents \
