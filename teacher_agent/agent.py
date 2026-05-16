@@ -83,30 +83,6 @@ def listar_alumnos(tool_context: ToolContext, nivel: str = "", grado: str = "") 
         return {"status": "error", "error_message": str(e)}
 
 
-def listar_planificaciones(tool_context: ToolContext) -> dict:
-    """
-    Lista todas las planificaciones guardadas en la base de datos, ordenadas de más reciente a más antigua.
-    Usá esta herramienta cuando la docente quiera ver, modificar o eliminar planificaciones existentes.
-    """
-    user_id = tool_context.state.get("user_id", "")
-    try:
-        r = httpx.get(
-            f"{INTERNAL_API_URL}/planificaciones/",
-            params={"user_id": user_id},
-            headers=_internal_headers(user_id),
-            timeout=10.0,
-        )
-        r.raise_for_status()
-        plans = r.json()
-        return {
-            "status": "success",
-            "total": len(plans),
-            "planificaciones": plans,
-        }
-    except Exception as e:
-        return {"status": "error", "error_message": str(e)}
-
-
 def crear_planificacion(
     tool_context: ToolContext,
     nombre: str,
@@ -154,51 +130,6 @@ def crear_planificacion(
             "planificacion_id": plan["id"],
             "nombre": plan["nombre"],
             "message": f"Planificación '{plan['nombre']}' guardada con ID {plan['id']}.",
-        }
-    except Exception as e:
-        return {"status": "error", "error_message": str(e)}
-
-
-def actualizar_planificacion(
-    tool_context: ToolContext,
-    planificacion_id: int,
-    nombre: str = "",
-    descripcion: str = "",
-    nivel: str = "",
-    periodo_inicio: str = "",
-    periodo_fin: str = "",
-    espacios_json: str = "",
-    chat_exportado: str = "",
-) -> dict:
-    """
-    Actualiza una planificación existente. Solo se modifican los campos que reciban un valor no vacío.
-    Usá listar_planificaciones primero para obtener el ID correcto.
-    """
-    user_id = tool_context.state.get("user_id", "")
-    payload = {k: v for k, v in {
-        "nombre": nombre or None,
-        "descripcion": descripcion or None,
-        "nivel": nivel or None,
-        "periodo_inicio": periodo_inicio or None,
-        "periodo_fin": periodo_fin or None,
-        "espacios_json": espacios_json or None,
-        "chat_exportado": chat_exportado or None,
-    }.items() if v is not None}
-    try:
-        r = httpx.put(
-            f"{INTERNAL_API_URL}/planificaciones/{planificacion_id}",
-            params={"user_id": user_id},
-            headers=_internal_headers(user_id),
-            json=payload,
-            timeout=10.0,
-        )
-        r.raise_for_status()
-        plan = r.json()
-        return {
-            "status": "success",
-            "planificacion_id": plan["id"],
-            "nombre": plan["nombre"],
-            "message": f"Planificación ID {plan['id']} actualizada correctamente.",
         }
     except Exception as e:
         return {"status": "error", "error_message": str(e)}
@@ -277,25 +208,255 @@ def buscar_en_internet(consulta: str) -> dict:
     }
 
 
-def eliminar_planificacion(tool_context: ToolContext, planificacion_id: int) -> dict:
+def create_activity(
+    tool_context: ToolContext,
+    title: str,
+    content: str,
+    project_id: str = None,
+    sequence_id: str = None,
+    group_id: str = None,
+) -> dict:
     """
-    Elimina permanentemente una planificación por su ID.
-    Siempre confirmá con la docente antes de eliminar. Usá listar_planificaciones para obtener el ID.
+    Guarda una nueva actividad/planificación en la base de datos.
+    El parámetro content debe contener el objeto JSON completo de la planificación o secuencia como string.
+    Si se proveen group_id y project_id, la asocia al proyecto integrador indicado.
+    Si además se provee sequence_id, la asocia a la secuencia dentro del proyecto.
+    Si no se proveen IDs jerárquicos, guarda la actividad sin jerarquía.
+    Usá esta herramienta después de mostrar la planificación y obtener confirmación de la docente.
+    Los IDs son UUIDs (strings), no números enteros.
+    """
+    user_id = tool_context.state.get("user_id", "")
+    payload = {
+        "title": title,
+        "raw_content": content,
+    }
+
+    # Elegir endpoint según contexto jerárquico
+    if group_id and project_id and sequence_id:
+        url = f"{INTERNAL_API_URL}/groups/{group_id}/projects/{project_id}/sequences/{sequence_id}/activities/"
+    elif group_id and project_id:
+        url = f"{INTERNAL_API_URL}/groups/{group_id}/projects/{project_id}/activities/"
+    else:
+        url = f"{INTERNAL_API_URL}/activities/"
+
+    try:
+        r = httpx.post(
+            url,
+            params={"user_id": user_id},
+            headers=_internal_headers(user_id),
+            json=payload,
+            timeout=10.0,
+        )
+        r.raise_for_status()
+        activity = r.json()
+        return {
+            "status": "success",
+            "activity_id": activity.get("id"),
+            "title": activity.get("title"),
+            "message": f"Actividad '{activity.get('title')}' guardada con ID {activity.get('id')}.",
+        }
+    except Exception as e:
+        return {"status": "error", "error_message": str(e)}
+
+
+def list_activities(
+    tool_context: ToolContext,
+    group_id: str = None,
+    project_id: str = None,
+    sequence_id: str = None,
+) -> dict:
+    """
+    Lista las actividades de un proyecto integrador o secuencia.
+    Requiere group_id y project_id (UUIDs). Si además se provee sequence_id, filtra por secuencia.
+    Si no tenés los IDs, usá list_groups primero para obtenerlos.
+    Los IDs son UUIDs (strings), no números enteros.
+    """
+    user_id = tool_context.state.get("user_id", "")
+
+    if not group_id or not project_id:
+        return {
+            "status": "error",
+            "error_message": (
+                "Se requieren group_id y project_id para listar actividades. "
+                "Usá list_groups para obtener los grupos y list_projects para obtener los proyectos."
+            ),
+        }
+
+    try:
+        if sequence_id:
+            url = f"{INTERNAL_API_URL}/groups/{group_id}/projects/{project_id}/sequences/{sequence_id}/activities/"
+        else:
+            url = f"{INTERNAL_API_URL}/groups/{group_id}/projects/{project_id}/activities/"
+
+        r = httpx.get(
+            url,
+            params={"user_id": user_id},
+            headers=_internal_headers(user_id),
+            timeout=10.0,
+        )
+        r.raise_for_status()
+        activities = r.json()
+        return {
+            "status": "success",
+            "total": len(activities),
+            "activities": activities,
+        }
+    except Exception as e:
+        return {"status": "error", "error_message": str(e)}
+
+
+# Alias para compatibilidad con sesiones ADK existentes
+def listar_planificaciones(tool_context: ToolContext) -> dict:
+    """
+    Lista todas las planificaciones guardadas en la base de datos, ordenadas de más reciente a más antigua.
+    Usá esta herramienta cuando la docente quiera ver, modificar o eliminar planificaciones existentes.
+    """
+    return list_activities(tool_context)
+
+
+def update_activity(
+    tool_context: ToolContext,
+    activity_id: str,
+    title: str = None,
+    content: str = None,
+    project_id: str = None,
+    sequence_id: str = None,
+) -> dict:
+    """
+    Actualiza una actividad existente. Solo se modifican los campos que reciban un valor.
+    Usá list_activities primero para obtener el ID correcto.
+    Los IDs son UUIDs (strings), no números enteros.
+    """
+    user_id = tool_context.state.get("user_id", "")
+    payload = {k: v for k, v in {
+        "title": title,
+        "raw_content": content,
+        "project_id": project_id,
+        "sequence_id": sequence_id,
+    }.items() if v is not None}
+    try:
+        r = httpx.patch(
+            f"{INTERNAL_API_URL}/activities/{activity_id}",
+            params={"user_id": user_id},
+            headers=_internal_headers(user_id),
+            json=payload,
+            timeout=10.0,
+        )
+        r.raise_for_status()
+        activity = r.json()
+        return {
+            "status": "success",
+            "activity_id": activity.get("id"),
+            "title": activity.get("title"),
+            "message": f"Actividad ID {activity.get('id')} actualizada correctamente.",
+        }
+    except Exception as e:
+        return {"status": "error", "error_message": str(e)}
+
+
+# Alias para compatibilidad con sesiones ADK existentes
+def actualizar_planificacion(
+    tool_context: ToolContext,
+    planificacion_id: int,
+    nombre: str = "",
+    descripcion: str = "",
+    nivel: str = "",
+    periodo_inicio: str = "",
+    periodo_fin: str = "",
+    espacios_json: str = "",
+    chat_exportado: str = "",
+) -> dict:
+    """
+    Actualiza una planificación existente. Solo se modifican los campos que reciban un valor no vacío.
+    Usá listar_planificaciones primero para obtener el ID correcto.
+    """
+    # Mapeamos los campos legacy al nuevo esquema
+    return update_activity(
+        tool_context,
+        activity_id=planificacion_id,
+        title=nombre or None,
+        content=chat_exportado or None,
+    )
+
+
+def delete_activity(tool_context: ToolContext, activity_id: str) -> dict:
+    """
+    Elimina permanentemente una actividad por su ID (UUID string).
+    Siempre confirmá con la docente antes de eliminar. Usá list_activities para obtener el ID.
     """
     user_id = tool_context.state.get("user_id", "")
     try:
         r = httpx.delete(
-            f"{INTERNAL_API_URL}/planificaciones/{planificacion_id}",
+            f"{INTERNAL_API_URL}/activities/{activity_id}",
             params={"user_id": user_id},
             headers=_internal_headers(user_id),
             timeout=10.0,
         )
         if r.status_code == 404:
-            return {"status": "error", "error_message": f"No existe planificación con ID {planificacion_id}."}
+            return {"status": "error", "error_message": f"No existe actividad con ID {activity_id}."}
         r.raise_for_status()
         return {
             "status": "success",
-            "message": f"Planificación ID {planificacion_id} eliminada correctamente.",
+            "message": f"Actividad ID {activity_id} eliminada correctamente.",
+        }
+    except Exception as e:
+        return {"status": "error", "error_message": str(e)}
+
+
+# Alias para compatibilidad con sesiones ADK existentes
+def eliminar_planificacion(tool_context: ToolContext, planificacion_id: int) -> dict:
+    """
+    Elimina permanentemente una planificación por su ID.
+    Siempre confirmá con la docente antes de eliminar. Usá listar_planificaciones para obtener el ID.
+    """
+    return delete_activity(tool_context, activity_id=planificacion_id)
+
+
+def list_groups(tool_context: ToolContext) -> dict:
+    """
+    Lista los grupos del docente. Usá esta herramienta cuando la docente pregunta
+    por sus grupos o quiere crear/ver actividades dentro de un grupo específico.
+    Devuelve el listado con IDs que luego se usan en list_projects.
+    """
+    user_id = tool_context.state.get("user_id", "")
+    try:
+        r = httpx.get(
+            f"{INTERNAL_API_URL}/groups/",
+            params={"user_id": user_id},
+            headers=_internal_headers(user_id),
+            timeout=10.0,
+        )
+        r.raise_for_status()
+        groups = r.json()
+        return {
+            "status": "success",
+            "total": len(groups),
+            "groups": groups,
+        }
+    except Exception as e:
+        return {"status": "error", "error_message": str(e)}
+
+
+def list_projects(tool_context: ToolContext, group_id: str) -> dict:
+    """
+    Lista los proyectos integradores de un grupo. Usá esta herramienta cuando la docente
+    quiere ver o trabajar con proyectos integradores de un grupo específico.
+    Requiere el group_id (UUID string) que podés obtener con list_groups.
+    """
+    user_id = tool_context.state.get("user_id", "")
+    try:
+        r = httpx.get(
+            f"{INTERNAL_API_URL}/groups/{group_id}/projects/",
+            params={"user_id": user_id},
+            headers=_internal_headers(user_id),
+            timeout=10.0,
+        )
+        r.raise_for_status()
+        projects = r.json()
+        return {
+            "status": "success",
+            "total": len(projects),
+            "projects": projects,
         }
     except Exception as e:
         return {"status": "error", "error_message": str(e)}
@@ -780,7 +941,7 @@ CRÍTICO — estructura EXACTA de la respuesta:
 Reemplazá TODOS los valores de ejemplo con el contenido real de la planificación. Los tres momentos son obligatorios.
 La duración TOTAL de los tres momentos debe ser entre 30 y 40 minutos. Distribuí así: Inicio ~5 min, Desarrollo ~20-25 min, Cierre ~10 min.
 
-Al recibir [[Sí, guardar]]: llamá `crear_planificacion`. Nada más.
+Al recibir [[Sí, guardar]]: llamá `create_activity(title=<titulo_de_la_planificacion>, content=<json_string_completo_del_objeto_planificacion>)`. Nada más.
 
 ### Flujo B — Validar actividad existente
 
@@ -789,11 +950,13 @@ Al recibir [[Sí, guardar]]: llamá `crear_planificacion`. Nada más.
 3. Buscá en los CEs y contenidos devueltos el que mejor corresponde a la actividad.
 4. Devolvé `type: "curriculum_match"` con el objeto `curriculum_match` poblado y en `text` un mensaje indicando si la actividad se alinea o no.
 
-### Flujo C — Gestionar planificaciones existentes
+### Flujo C — Gestionar actividades
 
-- Ver: FIRST `listar_planificaciones` → mostrá resumen con IDs.
-- Modificar: si no tenés el ID, FIRST listá. Confirmá cambios antes de actualizar.
-- Eliminar: pedí confirmación explícita BEFORE llamar `eliminar_planificacion`.
+- Ver: FIRST `list_groups` → la docente elige un grupo → `list_projects` → la docente elige un proyecto → `list_activities(group_id, project_id)` → mostrá resumen con IDs.
+- Si ya tenés el group_id y project_id en contexto, saltá directo a `list_activities`.
+- Modificar: si no tenés el ID de la actividad, FIRST listá. Confirmá cambios antes de actualizar con `update_activity(activity_id=<uuid>)`.
+- Eliminar: pedí confirmación explícita BEFORE llamar `delete_activity(activity_id=<uuid>)`.
+- Todos los IDs (group_id, project_id, sequence_id, activity_id) son UUIDs string, nunca números enteros.
 
 ### Flujo D — Secuencia de actividades
 
@@ -835,7 +998,7 @@ Cuando la docente pida explícitamente una **secuencia de actividades**:
 }
 ```
 
-Al recibir [[Sí, guardar]]: llamá `crear_planificacion` con `chat_exportado` = JSON string del objeto `secuencia`. Nada más.
+Al recibir [[Sí, guardar]]: llamá `create_activity(title=<"Secuencia: " + espacio + " — " + unidad_curricular>, content=<json_string_completo_del_objeto_secuencia>)`. Nada más.
 
 ### Tokens interactivos
 
@@ -884,12 +1047,18 @@ root_agent = Agent(
     output_schema=FacilitadorResponse,
     generate_content_config=genai_types.GenerateContentConfig(temperature=0.1),
     tools=[
+        # Herramientas de currículo y búsqueda
         consultar_curriculo_estructurado,
         buscar_en_internet,
+        consultar_curriculo_oficial,
+        # Alumnos
         listar_alumnos,
-        listar_planificaciones,
-        crear_planificacion,
-        actualizar_planificacion,
-        eliminar_planificacion,
+        # Jerarquía EBI
+        list_groups,
+        list_projects,
+        list_activities,
+        create_activity,
+        update_activity,
+        delete_activity,
     ],
 )

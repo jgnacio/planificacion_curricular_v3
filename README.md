@@ -1,45 +1,48 @@
 # Facilitador Docente EBI — planificacion_curricular_v3
 
-Herramienta de planificación curricular para docentes de Educación Básica Integrada (EBI/ANEP, Uruguay). Permite generar planificaciones semanales asistidas por IA, consultar el currículo oficial y gestionar alumnos.
+Backend Python del Facilitador Docente EBI: herramienta de planificación curricular para docentes de Educación Básica Integrada (EBI/ANEP, Uruguay). Genera planificaciones semanales asistidas por IA, consulta el currículo oficial y gestiona alumnos.
 
 ---
 
 ## Arquitectura
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│              facilitador_docente (Next.js 16)            │
-│  Puerto 3000 — UI web (Clerk auth, HeroUI, dark mode)   │
-└──────────────────────┬──────────────────────────────────┘
-                       │ HTTP
-         ┌─────────────┴──────────────┐
-         │                            │
-┌────────▼────────┐        ┌──────────▼──────────┐
-│   ADK server    │        │   FastAPI REST API   │
-│   Puerto 8000   │        │    Puerto 8001        │
-│  teacher_agent/ │        │       api/            │
-└────────┬────────┘        └──────────┬────────────┘
-         │                            │
-         │ RAG (HTTP)          SQLite (ebi.db)
-         │
-┌────────▼────────────────────────────┐
-│         Open Notebook               │
-│  Puerto 8502 — RAG sobre PDFs       │
-│  Puerto 5055 — REST API             │
-│  + SurrealDB (puerto 8000 interno)  │
-└─────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│              facilitador_docente (Next.js 16)                │
+│  Puerto 3000 — UI web (Clerk auth, HeroUI, dark mode)       │
+└──────────────────────┬──────────────────────────────────────┘
+                       │ HTTP / SSE
+            ┌──────────▼──────────┐
+            │  FastAPI REST API    │
+            │  api/main.py        │
+            │  Puerto 8001        │
+            │                     │
+            │  ┌───────────────┐  │
+            │  │  ADK Runner   │  │  ← embebido en el proceso FastAPI
+            │  │  (dev local)  │  │    InMemorySessionService
+            │  │               │  │    teacher_agent/agent.py
+            │  └───────┬───────┘  │
+            └──────────┼──────────┘
+                       │
+          ┌────────────┼────────────────────┐
+          │            │                    │
+  curriculum_          │              SQLite (ebi.db)
+  structure.json       │              alumnos + planificaciones
+  (JSON, 636KB)        │
+                  ┌────▼──────────┐
+                  │  Open Notebook │  ← opcional: RAG sobre PDFs ANEP
+                  │  Puerto 5055   │    (docker compose)
+                  └───────────────┘
 ```
 
-### Flujo de datos
+### Dev vs Prod
 
-1. El docente interactúa con el **frontend Next.js**
-2. El chat va al **ADK server** (`teacher_agent/agent.py`)
-3. El agente consulta:
-   - **Open Notebook** (RAG sobre PDFs del currículo oficial) via `consultar_curriculo_oficial`
-   - **curriculum_structure.json** (parser determinístico) via `consultar_curriculo_estructurado`
-   - **SQLite** (alumnos y planificaciones propias del docente)
-   - **DuckDuckGo** para búsquedas en internet
-4. La API REST (`api/`) sirve datos de alumnos, planificaciones y la estructura del currículo al frontend
+| Modo | Switch | Comportamiento |
+|------|--------|----------------|
+| Dev | `AGENT_ENGINE_RESOURCE_NAME` vacío | ADK Runner local con `InMemorySessionService` embebido en FastAPI |
+| Prod | `AGENT_ENGINE_RESOURCE_NAME=projects/...` | Vertex AI Agent Engine (sesiones persistentes en cloud) |
+
+En prod el Dockerfile despliega en Cloud Run (puerto 8080) y el agente se delega a Agent Engine. En dev todo corre en un solo proceso `uvicorn`.
 
 ---
 
@@ -48,58 +51,58 @@ Herramienta de planificación curricular para docentes de Educación Básica Int
 ```
 planificacion_curricular_v3/
 │
-├── api/                          # FastAPI REST — puerto 8001
-│   ├── main.py                   # App entry point, middleware, router registration
-│   ├── database.py               # SQLAlchemy engine + SessionLocal (SQLite)
-│   ├── models/                   # ORM models (Alumno, Planificacion)
-│   ├── schemas/                  # Pydantic schemas para request/response
+├── api/                           # FastAPI REST — puerto 8001
+│   ├── main.py                    # App unificada: agente + datos + curriculum
+│   ├── main_agent.py              # App solo-agente (para deploy agente separado)
+│   ├── main_data.py               # App solo-datos (curriculum + planificaciones + alumnos)
+│   ├── auth.py                    # Clerk JWT + X-Internal-Key auth dependency
+│   ├── database.py                # SQLAlchemy engine + SessionLocal (SQLite)
+│   ├── models/                    # ORM models (Alumno, Planificacion)
+│   ├── schemas/                   # Pydantic schemas para request/response
 │   └── routes/
-│       ├── curriculum.py         # GET /curriculum/estructura (curriculum_structure.json)
-│       ├── planificaciones.py    # CRUD planificaciones
-│       ├── alumnos.py            # CRUD alumnos
-│       └── agente.py             # POST /agente/chat (ADK runner interno)
+│       ├── curriculum.py          # GET /curriculum/estructura
+│       ├── planificaciones.py     # CRUD planificaciones
+│       ├── alumnos.py             # CRUD alumnos
+│       └── agente.py              # POST /agente/chat  +  POST /agente/chat/stream (SSE)
 │
-├── teacher_agent/                # Agente ADK (Google Agent Development Kit)
-│   ├── agent.py                  # root_agent con todas las tools
-│   └── __init__.py
+├── teacher_agent/                 # Agente ADK (Google Agent Development Kit)
+│   ├── agent.py                   # root_agent con tools, response schema, prompt
+│   └── requirements.txt
 │
-├── facilitador_docente/          # Frontend Next.js 16 (App Router)
-│   ├── app/
-│   │   ├── page.tsx              # Página principal
-│   │   ├── layout.tsx            # Layout con Clerk auth
-│   │   ├── providers.tsx         # HeroUIProvider + NextThemesProvider (dark mode)
-│   │   ├── api-actions.ts        # Server actions — todas las llamadas HTTP al backend
-│   │   └── components/
-│   │       ├── AppShell.tsx      # Shell con navegación por tabs
-│   │       └── tabs/
-│   │           ├── AsistenteTab.tsx      # Chat con el agente
-│   │           ├── PlanificacionesTab.tsx # Lista y gestión de planificaciones
-│   │           ├── ProgramaTab.tsx        # Explorador del currículo estructurado
-│   │           ├── AlumnosTab.tsx         # Gestión de alumnos
-│   │           └── DashboardTab.tsx       # Dashboard principal
-│   ├── lib/utils.ts              # Utilidades (cn, etc.)
-│   └── proxy.ts                  # Middleware Clerk auth
+├── curriculum_extractor/          # Pipeline ADK para extraer currículo de PDFs → JSON
+│   ├── agent/
+│   │   ├── extractor_agent.py     # ADK agent para parsear tablas PDF
+│   │   └── tools.py
+│   ├── pdf_reader.py              # Extrae tablas crudas de los PDFs ANEP
+│   ├── mcn_extractor.py           # Extrae competencias MCN
+│   ├── section_finder.py          # Ubica secciones dentro del PDF
+│   ├── merger.py                  # Combina resultados del agente + determinístico
+│   ├── schemas.py                 # Pydantic schemas del extractor
+│   └── run.py                     # Entrypoint: python -m curriculum_extractor
 │
 ├── data/
-│   └── curriculum_structure.json # Currículo EBI parseado (636KB, fuente de verdad)
-│
-├── pdfs/                         # PDFs fuente del currículo oficial ANEP
-│   ├── Compilación Programas 1er Ciclo - 2024.pdf
-│   └── Compilación Programas 2do Ciclo.pdf
+│   └── curriculum_structure.json  # Currículo EBI parseado (636KB, fuente de verdad)
 │
 ├── scripts/
-│   ├── extract_curriculum_structure.py  # Parser determinístico PDF → curriculum_structure.json
-│   └── gcloud-wrapper.sh                # Wrapper gcloud para Open Notebook en Docker
+│   ├── extract_curriculum_structure.py   # Parser determinístico PDF → JSON
+│   ├── fix_mcn_competencias.py           # Patch MCN en el JSON
+│   ├── migrate_add_user_id.py            # Migración SQLite
+│   ├── deploy_cloudrun.sh                # Deploy FastAPI a Cloud Run
+│   ├── deploy_agente_cloudrun.sh         # Deploy Agent Engine a Vertex AI
+│   ├── update_cloudrun_env.sh            # Actualizar env vars en Cloud Run
+│   └── gcloud-wrapper.sh                 # Wrapper gcloud para Open Notebook en Docker
 │
-├── marketing/posts/              # Posts para redes sociales (LinkedIn, Threads)
-├── mobile_app/                   # App Flutter (fase 2 — no activa)
+├── marketing/posts/               # Posts para redes sociales (LinkedIn, Threads)
 │
-├── ebi.db                        # SQLite — alumnos y planificaciones
-├── requirements.txt              # Dependencias Python del backend
-├── open-notebook-docker-compose.yml  # Docker: Open Notebook + SurrealDB
-├── start_all.sh                  # Levanta ADK server + FastAPI en paralelo
-├── start_adk.sh                  # Solo ADK server
-└── start_api.sh                  # Solo FastAPI
+├── ebi.db                         # SQLite — alumnos y planificaciones
+├── Dockerfile                     # Cloud Run: expone puerto 8080, copia api/ + teacher_agent/ + data/
+├── pyproject.toml                 # Proyecto uv
+├── uv.lock                        # Lockfile uv
+├── requirements.txt               # Deps curriculum_extractor (PyMuPDF, pdfplumber…)
+├── requirements-extractor.txt     # Deps extractor con ADK
+├── start_all.sh                   # Levanta FastAPI (uv run uvicorn api.main:app)
+├── start_adk.sh                   # Solo ADK server (dev alternativo)
+└── start_api.sh                   # Solo FastAPI data API
 ```
 
 ---
@@ -108,14 +111,16 @@ planificacion_curricular_v3/
 
 | Tool | Descripción |
 |------|-------------|
-| `listar_alumnos` | Lista alumnos del grupo, filtra por nivel/grado |
-| `listar_planificaciones` | Lista planificaciones guardadas |
-| `crear_planificacion` | Crea una planificación nueva en SQLite |
-| `actualizar_planificacion` | Actualiza nombre/descripción de una planificación |
-| `eliminar_planificacion` | Elimina una planificación |
-| `consultar_curriculo_oficial` | RAG sobre PDFs via Open Notebook (orientaciones pedagógicas) |
-| `consultar_curriculo_estructurado` | Datos estructurados: CEs, contenidos, criterios desde JSON |
-| `buscar_en_internet` | Búsqueda DuckDuckGo para recursos externos |
+| `consultar_curriculo_estructurado` | Datos estructurados desde `data/curriculum_structure.json`: CEs, contenidos, criterios de logro. Siempre se llama primero. |
+| `consultar_curriculo_oficial` | RAG sobre PDFs ANEP via Open Notebook (orientaciones pedagógicas). Servicio opcional. |
+| `listar_alumnos` | Lista alumnos del grupo (filtra por nivel/grado) via HTTP interno |
+| `listar_planificaciones` | Lista planificaciones guardadas via HTTP interno |
+| `crear_planificacion` | Guarda nueva planificación en SQLite |
+| `actualizar_planificacion` | Actualiza campos de una planificación existente |
+| `eliminar_planificacion` | Elimina una planificación por ID |
+| `buscar_en_internet` | DuckDuckGo: extrae contenido real de hasta 5 páginas web |
+
+El agente usa `output_schema=FacilitadorResponse` — toda respuesta es JSON con campos `type`, `text`, `curriculum_match`, `planificacion`, `secuencia` y `refs`.
 
 ---
 
@@ -125,14 +130,25 @@ planificacion_curricular_v3/
 |--------|------|-------------|
 | `GET` | `/health` | Health check |
 | `GET` | `/curriculum/estructura` | Currículo completo como JSON |
-| `GET` | `/planificaciones/` | Listar planificaciones |
+| `GET` | `/planificaciones/` | Listar planificaciones del usuario |
 | `POST` | `/planificaciones/` | Crear planificación |
 | `GET` | `/planificaciones/{id}` | Obtener planificación |
+| `PUT` | `/planificaciones/{id}` | Actualizar planificación |
 | `DELETE` | `/planificaciones/{id}` | Eliminar planificación |
-| `GET` | `/alumnos/` | Listar alumnos |
+| `GET` | `/alumnos/` | Listar alumnos del usuario |
 | `POST` | `/alumnos/` | Crear alumno |
-| `POST` | `/agente/chat` | Chat directo con el agente (alternativa al ADK server) |
-| `GET` | `/pdfs/{filename}` | Servir PDFs como archivos estáticos |
+| `PUT` | `/alumnos/{id}` | Actualizar alumno |
+| `DELETE` | `/alumnos/{id}` | Eliminar alumno |
+| `POST` | `/agente/chat` | Chat con el agente (respuesta única JSON) |
+| `POST` | `/agente/chat/stream` | Chat con el agente via SSE (tool labels + tokens + done) |
+| `GET` | `/pdfs/{filename}` | Servir PDFs del currículo oficial como estáticos |
+
+### Autenticación
+
+Todos los endpoints (excepto `/health`) requieren una de estas dos formas:
+
+- **JWT Clerk** — `Authorization: Bearer <token>`: extrae el `sub` como `user_id`
+- **X-Internal-Key** — header `X-Internal-Key: <secret>` + query param `?user_id=...`: para llamadas internas del agente a su propia API
 
 ---
 
@@ -140,71 +156,88 @@ planificacion_curricular_v3/
 
 ### Prerequisitos
 
-- Python 3.11+
-- Node.js 20+ y pnpm
-- Docker (para Open Notebook + SurrealDB)
-- Cuenta Google Cloud con Vertex AI habilitado
+- Python 3.11+ y [`uv`](https://docs.astral.sh/uv/)
+- Node.js 20+ y pnpm (para el frontend)
+- Docker (opcional, para Open Notebook)
+- Cuenta Google Cloud con Vertex AI habilitado (o API Key de AI Studio para dev)
 
 ### Variables de entorno (`.env`)
 
 ```env
-GOOGLE_API_KEY=...
-GOOGLE_GENAI_USE_VERTEXAI=1
-GOOGLE_CLOUD_PROJECT=...
-APP_ENV=dev
+# ── Agente IA ──────────────────────────────────────
+GOOGLE_API_KEY=...                        # Dev (AI Studio)
+GOOGLE_GENAI_USE_VERTEXAI=0               # 1 para usar Vertex AI
+GOOGLE_CLOUD_PROJECT=...                  # Requerido si USE_VERTEXAI=1
+GOOGLE_CLOUD_LOCATION=us-central1
+
+# ── API interna ────────────────────────────────────
+INTERNAL_API_URL=http://localhost:8001    # URL que usa el agente para llamarse a sí mismo
+INTERNAL_API_KEY=...                      # Clave compartida para auth interna
+
+# ── Auth Clerk ─────────────────────────────────────
+CLERK_JWKS_URL=https://<clerk-domain>/.well-known/jwks.json
+
+# ── Open Notebook (opcional) ───────────────────────
+OPEN_NOTEBOOK_URL=http://localhost:5055
+OPEN_NOTEBOOK_API_KEY=...
+OPEN_NOTEBOOK_NOTEBOOK_ID=notebook:...
+OPEN_NOTEBOOK_MODEL=model:...
+
+# ── Prod: Vertex AI Agent Engine ───────────────────
+AGENT_ENGINE_RESOURCE_NAME=              # Vacío = dev local; set = Agent Engine en prod
 ```
 
-### Frontend (`facilitador_docente/`)
-
-```env
-# facilitador_docente/.env.local
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=...
-CLERK_SECRET_KEY=...
-API_URL=http://localhost:8001
-ADK_URL=http://localhost:8000
-```
-
-### Pasos de instalación
+### Instalación
 
 ```bash
-# 1. Backend Python
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+# Backend Python (uv)
+uv sync
 
-# 2. Frontend
-cd facilitador_docente
-pnpm install
-
-# 3. Open Notebook (Docker)
-docker compose -f open-notebook-docker-compose.yml up -d
+# Open Notebook (opcional — para RAG sobre PDFs)
+# docker compose -f open-notebook-docker-compose.yml up -d
 ```
 
-### Ejecutar
+### Ejecutar en desarrollo
 
 ```bash
-# Backend completo (ADK + FastAPI)
+# Backend — un solo proceso FastAPI en puerto 8001
 ./start_all.sh
 
-# Frontend (otra terminal)
-cd facilitador_docente
-pnpm dev
+# Frontend (otra terminal, en facilitador_docente/)
+pnpm install && pnpm dev
 ```
 
 ---
 
-## Datos del currículo
+## Currículo EBI
 
-`data/curriculum_structure.json` es generado por el parser determinístico:
+`data/curriculum_structure.json` es generado por el pipeline de extracción:
 
 ```bash
+# Opción A — Parser determinístico (regex/string sobre PDFs)
 python scripts/extract_curriculum_structure.py
+
+# Opción B — Pipeline ADK (más preciso para tablas complejas)
+python -m curriculum_extractor
 ```
 
-El parser extrae la jerarquía completa desde los PDFs en `pdfs/`:
-- Tramos → Espacios → Materias → Competencias Específicas (CEs) → Contenidos → Criterios de logro
+Jerarquía extraída: **Tramos → Espacios → Materias → Competencias Específicas (CEs) → Contenidos (por grado) → Criterios de logro (por grado)**
 
-Este archivo es la **fuente de verdad** para el explorador de currículo y el agente.
+El agente lee este archivo directamente en memoria con `consultar_curriculo_estructurado`. Solo cubre 2do ciclo (Tramo 3: 3° y 4°; Tramo 4: 5° y 6°).
+
+---
+
+## Deploy (Cloud Run)
+
+```bash
+# FastAPI + agente embebido
+bash scripts/deploy_cloudrun.sh
+
+# Agente en Vertex AI Agent Engine (prod escalable)
+bash scripts/deploy_agente_cloudrun.sh
+```
+
+El `Dockerfile` copia `api/`, `teacher_agent/` y `data/` al contenedor y expone el puerto 8080.
 
 ---
 
@@ -212,9 +245,11 @@ Este archivo es la **fuente de verdad** para el explorador de currículo y el ag
 
 | Capa | Tecnología |
 |------|-----------|
-| Frontend | Next.js 16, HeroUI v3, Tailwind CSS v4, Clerk auth |
 | Backend | FastAPI, SQLAlchemy, SQLite |
-| Agente IA | Google ADK, Gemini 2.5 Flash (Vertex AI) |
-| RAG | Open Notebook + SurrealDB |
-| Currículo | Parser determinístico (regex/string) sobre PDFs ANEP |
-| Mobile (fase 2) | Flutter |
+| Agente IA | Google ADK, Gemini (`gemini-3.1-pro-preview`) |
+| Auth | Clerk JWKS + JWT RS256 |
+| RAG (opcional) | Open Notebook + SurrealDB |
+| Currículo | Pipeline ADK + parser determinístico sobre PDFs ANEP |
+| Package manager | uv |
+| Deploy | Docker + Cloud Run (Google Cloud) |
+| Frontend | Next.js 16 — ver `facilitador_docente/` |

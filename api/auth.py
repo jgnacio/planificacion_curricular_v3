@@ -1,4 +1,5 @@
 import os
+from dataclasses import dataclass
 
 import httpx
 from fastapi import Header, HTTPException, Query
@@ -21,18 +22,28 @@ def _get_jwks() -> dict:
     return _jwks_cache
 
 
+@dataclass
+class UserContext:
+    user_id: str
+    role: str | None
+    institution_tenant_id: str | None
+
+
+def _decode_token(token: str) -> dict:
+    jwks = _get_jwks()
+    return jwt.decode(
+        token,
+        jwks,
+        algorithms=["RS256"],
+        options={"verify_aud": False},
+    )
+
+
 async def get_current_user_id(
     authorization: str | None = Header(None),
     x_internal_key: str | None = Header(None, alias="x-internal-key"),
     user_id: str | None = Query(None),
 ) -> str:
-    """
-    Dependency de FastAPI. Retorna el user_id autenticado.
-
-    Acepta dos formas de auth:
-    - JWT de Clerk en Authorization: Bearer <token> → extrae sub claim
-    - X-Internal-Key header (para llamadas del Agent Engine) → usa user_id query param
-    """
     if x_internal_key and INTERNAL_API_KEY and x_internal_key == INTERNAL_API_KEY:
         if not user_id:
             raise HTTPException(status_code=400, detail="user_id requerido para llamadas internas")
@@ -41,13 +52,7 @@ async def get_current_user_id(
     if authorization and authorization.startswith("Bearer "):
         token = authorization[7:]
         try:
-            jwks = _get_jwks()
-            payload = jwt.decode(
-                token,
-                jwks,
-                algorithms=["RS256"],
-                options={"verify_aud": False},
-            )
+            payload = _decode_token(token)
             uid: str = payload.get("sub", "")
             if not uid:
                 raise HTTPException(status_code=401, detail="JWT no contiene sub claim")
@@ -56,3 +61,38 @@ async def get_current_user_id(
             raise HTTPException(status_code=401, detail=f"JWT inválido: {e}")
 
     raise HTTPException(status_code=401, detail="Authorization requerida")
+
+
+async def get_current_user(
+    authorization: str | None = Header(None),
+    x_internal_key: str | None = Header(None, alias="x-internal-key"),
+    user_id: str | None = Query(None),
+) -> UserContext:
+    if x_internal_key and INTERNAL_API_KEY and x_internal_key == INTERNAL_API_KEY:
+        if not user_id:
+            raise HTTPException(status_code=400, detail="user_id requerido para llamadas internas")
+        return UserContext(user_id=user_id, role=None, institution_tenant_id=None)
+
+    if authorization and authorization.startswith("Bearer "):
+        token = authorization[7:]
+        try:
+            payload = _decode_token(token)
+            uid: str = payload.get("sub", "")
+            if not uid:
+                raise HTTPException(status_code=401, detail="JWT no contiene sub claim")
+            meta: dict = payload.get("public_metadata", {})
+            return UserContext(
+                user_id=uid,
+                role=meta.get("role"),
+                institution_tenant_id=meta.get("institution_tenant_id"),
+            )
+        except JWTError as e:
+            raise HTTPException(status_code=401, detail=f"JWT inválido: {e}")
+
+    raise HTTPException(status_code=401, detail="Authorization requerida")
+
+
+def require_institution_admin(user: UserContext) -> UserContext:
+    if user.role != "institution_admin" or not user.institution_tenant_id:
+        raise HTTPException(status_code=403, detail="Se requiere rol institution_admin")
+    return user
