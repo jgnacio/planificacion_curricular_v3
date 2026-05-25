@@ -5,7 +5,7 @@ from pydantic import BaseModel, field_validator
 
 class IntegrativeProjectCreate(BaseModel):
     name: str
-    group_id: str
+    group_id: str | None = None  # overridden from path param in the route
     purpose: str | None = None
     duration_weeks: int | None = None
     final_product: str | None = None

@@ -17,8 +17,10 @@ import api.models.group                # noqa: F401
 import api.models.integrative_project  # noqa: F401
 import api.models.activity_sequence    # noqa: F401
 import api.models.activity             # noqa: F401
+import api.models.chat_session         # noqa: F401
 from api.routes import curriculum, alumnos
 from api.routes import agente
+from api.routes import agente_sessions
 from api.routes import institutions, billing, subscriptions, webhooks, educational_centers, students
 from api.routes import groups, sequences, activities
 
@@ -47,6 +49,7 @@ if os.path.isdir(_pdfs_dir):
 app.include_router(curriculum.router)
 app.include_router(alumnos.router)
 app.include_router(agente.router)
+app.include_router(agente_sessions.router)
 app.include_router(institutions.router)
 app.include_router(billing.router)
 app.include_router(subscriptions.router)

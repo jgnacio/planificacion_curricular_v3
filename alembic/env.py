@@ -12,7 +12,8 @@ if config.config_file_name is not None:
 
 database_url = os.getenv("DATABASE_URL")
 if database_url:
-    config.set_main_option("sqlalchemy.url", database_url)
+    # ConfigParser interprets % as interpolation syntax — escape it
+    config.set_main_option("sqlalchemy.url", database_url.replace("%", "%%"))
 
 from api.database import Base
 import api.models.alumno               # noqa: F401
@@ -21,6 +22,7 @@ import api.models.user_profile         # noqa: F401
 import api.models.institution          # noqa: F401
 import api.models.billing              # noqa: F401
 import api.models.educational_center   # noqa: F401
+import api.models.chat_session         # noqa: F401
 
 target_metadata = Base.metadata
 

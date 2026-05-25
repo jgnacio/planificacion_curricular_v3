@@ -1,9 +1,11 @@
 import os
+from functools import cached_property
 
 from dotenv import load_dotenv
 from google.adk.agents import Agent, LlmAgent, SequentialAgent
+from google.adk.models import Gemini
 from google.adk.tools import ToolContext
-from google.genai import types as genai_types
+from google.genai import Client, types as genai_types
 from pydantic import BaseModel, Field
 from typing import List
 
@@ -34,7 +36,8 @@ if _use_vertexai:
     )
 else:
     # Dev local con GOOGLE_API_KEY (Google AI Studio)
-    if not os.getenv("GOOGLE_API_KEY"):
+    # En prod (Agent Platform) se usa AI_STUDIO_API_KEY para no interferir con VertexAiSessionService
+    if not (os.getenv("GOOGLE_API_KEY") or os.getenv("AI_STUDIO_API_KEY")):
         raise ValueError(
             "Configurá GOOGLE_API_KEY (dev) o GOOGLE_GENAI_USE_VERTEXAI=1 (prod)."
         )
@@ -46,6 +49,26 @@ if not INTERNAL_API_URL:
     )
 
 # ==========================================
+# LLM — Google AI Studio (bypass Vertex AI Publisher Models)
+# El ADK template en Agent Platform fuerza GOOGLE_GENAI_USE_VERTEXAI=1,
+# pero el proyecto no tiene acceso a Publisher Models de Vertex AI.
+# Subclasear Gemini y override api_client fuerza AI Studio sin importar el env.
+# ==========================================
+
+class _GeminiAIStudio(Gemini):
+    """Gemini que siempre usa Google AI Studio (AI_STUDIO_API_KEY), ignorando el backend de Vertex AI.
+
+    Usamos AI_STUDIO_API_KEY en vez de GOOGLE_API_KEY para evitar que VertexAiSessionService
+    la tome como express_mode_api_key y rompa la gestión de sesiones de Agent Platform.
+    """
+    @cached_property
+    def api_client(self) -> Client:
+        key = os.getenv("AI_STUDIO_API_KEY") or os.getenv("GOOGLE_API_KEY", "")
+        # vertexai=False fuerza Google AI Studio aunque GOOGLE_GENAI_USE_VERTEXAI=1
+        return Client(api_key=key, vertexai=False)
+
+
+# ==========================================
 # HERRAMIENTAS — API HTTP (planificaciones y alumnos)
 # ==========================================
 
@@ -53,11 +76,13 @@ def _internal_headers(user_id: str) -> dict:
     return {"X-Internal-Key": INTERNAL_API_KEY, "Content-Type": "application/json"}
 
 
-def listar_alumnos(tool_context: ToolContext, nivel: str = "", grado: str = "") -> dict:
+def listar_alumnos(tool_context: ToolContext, nivel: str = "", grado: str = "", group_id: str = "") -> dict:
     """
-    Lista los alumnos registrados. Filtra opcionalmente por nivel y/o grado.
+    Lista los alumnos registrados. Filtra opcionalmente por nivel, grado y/o group_id.
     Usá esta herramienta antes de crear una planificación para conocer el grupo:
     cantidad de alumnos, sus niveles, grados y cualquier nota especial sobre ellos.
+    Si ya conocés el grupo específico (porque la docente está trabajando en un grupo),
+    pasá el group_id para obtener solo los alumnos de ese grupo.
     """
     user_id = tool_context.state.get("user_id", "")
     params = {"user_id": user_id}
@@ -65,6 +90,8 @@ def listar_alumnos(tool_context: ToolContext, nivel: str = "", grado: str = "") 
         params["nivel"] = nivel
     if grado:
         params["grado"] = grado
+    if group_id:
+        params["group_id"] = group_id
     try:
         r = httpx.get(
             f"{INTERNAL_API_URL}/alumnos/",
@@ -166,36 +193,37 @@ def buscar_en_internet(consulta: str) -> dict:
 
     try:
         with DDGS() as ddgs:
-            raw_results = list(ddgs.text(consulta, max_results=10))
+            raw_results = list(ddgs.text(consulta, max_results=6))
     except Exception as e:
         return {"status": "error", "error_message": f"Error en la búsqueda DuckDuckGo: {e}"}
 
     if not raw_results:
         return {"status": "not_found", "message": "No se encontraron resultados para esa consulta."}
 
-    fuentes = []
-    with httpx.Client(headers=_HEADERS, timeout=_TIMEOUT, follow_redirects=True) as client:
-        for item in raw_results:
-            if len(fuentes) >= 5:
-                break
-            url = item.get("href", "")
-            title = item.get("title", "")
-            snippet = item.get("body", "")
-            if not url:
-                continue
-            # Try to fetch full page content; fall back to DDG snippet
-            try:
+    def _fetch_one(item: dict) -> dict | None:
+        url = item.get("href", "")
+        title = item.get("title", "")
+        snippet = item.get("body", "")
+        if not url:
+            return None
+        try:
+            with httpx.Client(headers=_HEADERS, timeout=_TIMEOUT, follow_redirects=True) as client:
                 resp = client.get(url)
                 content = _extract_text(resp.text) if resp.status_code == 200 else snippet
-            except Exception:
-                content = snippet
+        except Exception:
+            content = snippet
+        return {"titulo": title, "url": url, "contenido": content} if content else None
 
-            if content:
-                fuentes.append({
-                    "titulo": title,
-                    "url": url,
-                    "contenido": content,
-                })
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    fuentes = []
+    with ThreadPoolExecutor(max_workers=3) as pool:
+        futures = {pool.submit(_fetch_one, item): item for item in raw_results[:6]}
+        for future in as_completed(futures):
+            if len(fuentes) >= 3:
+                break
+            result = future.result()
+            if result:
+                fuentes.append(result)
 
     if not fuentes:
         return {"status": "not_found", "message": "No se pudo extraer contenido de los resultados."}
@@ -254,6 +282,51 @@ def create_activity(
             "activity_id": activity.get("id"),
             "title": activity.get("title"),
             "message": f"Actividad '{activity.get('title')}' guardada con ID {activity.get('id')}.",
+        }
+    except Exception as e:
+        return {"status": "error", "error_message": str(e)}
+
+
+def create_sequence(
+    tool_context: ToolContext,
+    group_id: str,
+    project_id: str,
+    name: str,
+    learning_goal: str = None,
+    order: int = 0,
+    start_date: str = None,
+    end_date: str = None,
+) -> dict:
+    """
+    Crea una nueva secuencia de actividades dentro de un proyecto integrador.
+    Retorna el sequence_id que debés usar para asociar cada actividad con create_activity.
+    Llamá esta herramienta PRIMERO al guardar una secuencia, ANTES de crear las actividades individuales.
+    Los IDs son UUIDs (strings), no números enteros.
+    """
+    user_id = tool_context.state.get("user_id", "")
+    payload = {
+        "name": name,
+        "project_id": project_id,
+        "learning_goal": learning_goal,
+        "order": order,
+        "start_date": start_date,
+        "end_date": end_date,
+    }
+    try:
+        r = httpx.post(
+            f"{INTERNAL_API_URL}/groups/{group_id}/projects/{project_id}/sequences/",
+            params={"user_id": user_id},
+            headers=_internal_headers(user_id),
+            json=payload,
+            timeout=10.0,
+        )
+        r.raise_for_status()
+        seq = r.json()
+        return {
+            "status": "success",
+            "sequence_id": seq.get("id"),
+            "name": seq.get("name"),
+            "message": f"Secuencia '{seq.get('name')}' creada con ID {seq.get('id')}. Ahora creá cada actividad con create_activity usando este sequence_id.",
         }
     except Exception as e:
         return {"status": "error", "error_message": str(e)}
@@ -885,7 +958,7 @@ Cuando la docente responde con la temática (cualquier texto que no sea "Quiero 
 Si dice "Quiero cambiar algo", preguntá qué quiere cambiar y ajustá (devolvé `type: "message"`).
 
 **PASO 3 — Generar planificación (al recibir la temática de PASO 2b)**
-Llamá `listar_alumnos()` para conocer el grupo real.
+Llamá `listar_alumnos()` para conocer el grupo real. Si la conversación tiene un `group_id` en el contexto (porque la docente está trabajando dentro de un grupo específico), pasalo como `listar_alumnos(group_id=<group_id>)` para obtener solo los alumnos de ese grupo.
 Usá los datos curriculares y metodológicos ya obtenidos en PASO 1 — NO volvás a llamar ninguna tool de currículo.
 Contextualizá todas las actividades usando la temática que indicó la docente.
 
@@ -962,9 +1035,10 @@ Al recibir [[Sí, guardar]]: llamá `create_activity(title=<titulo_de_la_planifi
 
 Cuando la docente pida explícitamente una **secuencia de actividades**:
 
-1. Llamá `consultar_curriculo_estructurado()` y `listar_alumnos()` para obtener contexto.
-2. Generá entre 3 y 6 actividades numeradas con plan detallado en bullets.
-3. Respondé con `type: "secuencia"` y el objeto `secuencia` completo.
+1. Primero, si la conversación ya tiene un `group_id` en el contexto (porque se está trabajando dentro de un grupo específico), llamá `listar_alumnos(group_id=<group_id>)` para conocer los alumnos del grupo y contextualizar mejor las actividades.
+2. Llamá `consultar_curriculo_estructurado()` para obtener el contenido curricular.
+3. Generá entre 3 y 6 actividades numeradas con plan detallado en bullets.
+4. Respondé con `type: "secuencia"` y el objeto `secuencia` completo.
 
 **Estructura JSON obligatoria:**
 ```json
@@ -998,7 +1072,11 @@ Cuando la docente pida explícitamente una **secuencia de actividades**:
 }
 ```
 
-Al recibir [[Sí, guardar]]: llamá `create_activity(title=<"Secuencia: " + espacio + " — " + unidad_curricular>, content=<json_string_completo_del_objeto_secuencia>)`. Nada más.
+Al recibir [[Sí, guardar]]:
+1. Si no tenés `group_id` y `project_id` en el contexto de la conversación, llamá `list_groups()` y luego `list_projects(group_id)` para obtenerlos. Elegí el que corresponda al contexto.
+2. Llamá `create_sequence(group_id=<group_id>, project_id=<project_id>, name=<unidad_curricular>, learning_goal=<meta_aprendizaje>)`. Guardá el `sequence_id` retornado.
+3. Para CADA actividad del array `actividades`, llamá `create_activity(title=<recorte>, content=<JSON de esa actividad como string>, group_id=<group_id>, project_id=<project_id>, sequence_id=<sequence_id>)`.
+4. Una vez guardadas todas, confirmá cuántas actividades se crearon exitosamente.
 
 ### Tokens interactivos
 
@@ -1040,7 +1118,7 @@ You: (llamás `listar_alumnos`, generás la planificación contextualizada con e
 # ==========================================
 
 root_agent = Agent(
-    model="gemini-3.1-pro-preview",
+    model=_GeminiAIStudio(model="gemini-3.5-flash"),
     name="root_agent",
     description="Facilitador Docente EBI — valida planificaciones, genera nuevas desde la normativa oficial ANEP y gestiona el guardado y actualización de planificaciones.",
     instruction=AGENT_PROMPT,
@@ -1057,6 +1135,7 @@ root_agent = Agent(
         list_groups,
         list_projects,
         list_activities,
+        create_sequence,
         create_activity,
         update_activity,
         delete_activity,

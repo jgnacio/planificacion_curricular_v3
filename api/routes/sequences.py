@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from api.auth import get_current_user_id
 from api.database import get_db
+from api.dependencies import ensure_user_profile
 from api.models.activity_sequence import ActivitySequence
 from api.models.group import Group
 from api.models.integrative_project import IntegrativeProject
@@ -100,6 +101,7 @@ def create_sequence(
     uid: str = Depends(get_current_user_id),
     db: Session = Depends(get_db),
 ):
+    ensure_user_profile(uid, db)
     _verify_project_ownership(group_id, project_id, uid, db)
     payload = data.model_dump()
     # project_id viene del path — sobreescribir para garantizar integridad

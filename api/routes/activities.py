@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from api.auth import get_current_user_id
 from api.database import get_db
+from api.dependencies import ensure_user_profile
 from api.models.activity import Activity
 from api.models.activity_sequence import ActivitySequence
 from api.models.group import Group
@@ -187,6 +188,7 @@ def create_project_activity(
     uid: str = Depends(get_current_user_id),
     db: Session = Depends(get_db),
 ):
+    ensure_user_profile(uid, db)
     _verify_project_ownership(group_id, project_id, uid, db)
     payload = data.model_dump()
     # Sobreescribir FKs con los del path para garantizar integridad
@@ -240,6 +242,7 @@ def create_sequence_activity(
     uid: str = Depends(get_current_user_id),
     db: Session = Depends(get_db),
 ):
+    ensure_user_profile(uid, db)
     _verify_sequence_ownership(group_id, project_id, sequence_id, uid, db)
     payload = data.model_dump()
     # Sobreescribir FKs con los del path para garantizar integridad
@@ -305,6 +308,7 @@ def create_orphan_activity(
     db: Session = Depends(get_db),
 ):
     """Crea una actividad sin jerarquía obligatoria — compatible con el agente IA existente."""
+    ensure_user_profile(uid, db)
     activity = Activity(**data.model_dump(), user_id=uid)
     _parse_agent_content(activity.raw_content, activity)
     db.add(activity)

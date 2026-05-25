@@ -4,8 +4,11 @@ from sqlalchemy.orm import Session
 
 from api.auth import get_current_user_id
 from api.database import get_db
+from api.dependencies import ensure_user_profile
+from api.models.alumno import Alumno
 from api.models.group import Group
 from api.models.integrative_project import IntegrativeProject
+from api.schemas.alumno import AlumnoRead
 from api.schemas.group import GroupCreate, GroupRead, GroupUpdate
 from api.schemas.integrative_project import (
     IntegrativeProjectCreate,
@@ -82,6 +85,7 @@ def create_group(
     uid: str = Depends(get_current_user_id),
     db: Session = Depends(get_db),
 ):
+    ensure_user_profile(uid, db)
     group = Group(**data.model_dump(), user_id=uid)
     db.add(group)
     db.commit()
@@ -153,6 +157,7 @@ def create_project(
     uid: str = Depends(get_current_user_id),
     db: Session = Depends(get_db),
 ):
+    ensure_user_profile(uid, db)
     _get_group_or_404(group_id, uid, db)
     payload = data.model_dump()
     # group_id viene del path — sobreescribir para garantizar integridad
@@ -202,3 +207,24 @@ def delete_project(
     project = _get_project_or_404(group_id, project_id, uid, db)
     db.delete(project)
     db.commit()
+
+
+# ---------------------------------------------------------------------------
+# Students
+# ---------------------------------------------------------------------------
+
+@router.get("/{group_id}/students/", response_model=list[AlumnoRead])
+def list_students(
+    group_id: str,
+    uid: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+):
+    _get_group_or_404(group_id, uid, db)
+    return (
+        db.query(Alumno)
+        .filter(Alumno.group_id == group_id, Alumno.user_id == uid)
+        .order_by(Alumno.nombre_completo)
+        .all()
+    )
+
+

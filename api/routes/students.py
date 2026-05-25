@@ -12,12 +12,15 @@ router = APIRouter(prefix="/alumnos", tags=["alumnos"])
 @router.get("/", response_model=list[AlumnoRead])
 def listar(
     educational_center_id: str | None = None,
+    group_id: str | None = None,
     uid: str = Depends(get_current_user_id),
     db: Session = Depends(get_db),
 ):
     q = db.query(Alumno).filter(Alumno.user_id == uid)
     if educational_center_id:
         q = q.filter(Alumno.educational_center_id == educational_center_id)
+    if group_id:
+        q = q.filter(Alumno.group_id == group_id)
     return q.order_by(Alumno.nombre_completo).all()
 
 

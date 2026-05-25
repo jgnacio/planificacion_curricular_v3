@@ -8,6 +8,7 @@ class AlumnoCreate(BaseModel):
     nivel: str | None = None
     grado: str | None = None
     notas: str | None = None
+    group_id: str | None = None
 
 
 class AlumnoUpdate(BaseModel):
@@ -16,6 +17,7 @@ class AlumnoUpdate(BaseModel):
     nivel: str | None = None
     grado: str | None = None
     notas: str | None = None
+    group_id: str | None = None
 
 
 class AlumnoRead(BaseModel):
@@ -26,6 +28,7 @@ class AlumnoRead(BaseModel):
     nivel: str | None
     grado: str | None
     notas: str | None
+    group_id: str | None
     created_at: datetime
 
     model_config = {"from_attributes": True}

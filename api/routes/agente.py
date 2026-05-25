@@ -3,16 +3,19 @@ import os
 import json
 import logging
 import traceback
+from datetime import datetime, UTC
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+from sqlalchemy.orm import Session
 
 from api.auth import get_current_user_id
+from api.database import get_db
 
 logger = logging.getLogger(__name__)
 
-AGENT_ENGINE_RESOURCE_NAME = ""
+AGENT_ENGINE_RESOURCE_NAME = os.getenv("AGENT_ENGINE_RESOURCE_NAME", "")
 GOOGLE_CLOUD_PROJECT = os.getenv("GOOGLE_CLOUD_PROJECT", "")
 GOOGLE_CLOUD_LOCATION = os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1")
 
@@ -43,12 +46,29 @@ else:
     vertexai.init(project=GOOGLE_CLOUD_PROJECT, location=GOOGLE_CLOUD_LOCATION)
     _remote_agent = None  # se inicializa en el primer request
 
-
 def _get_remote_agent():
     global _remote_agent
     if _remote_agent is None:
         _remote_agent = agent_engines.get(AGENT_ENGINE_RESOURCE_NAME)
     return _remote_agent
+
+
+def _save_session_to_db(db: Session, user_id: str, ap_session_id: str, title: str) -> None:
+    from api.models.chat_session import ChatSession
+    existing = db.query(ChatSession).filter(
+        ChatSession.user_id == user_id,
+        ChatSession.ap_session_id == ap_session_id,
+    ).first()
+    if existing:
+        existing.updated_at = datetime.now(UTC)
+    else:
+        row = ChatSession(
+            user_id=user_id,
+            ap_session_id=ap_session_id,
+            title=title[:60] + ("..." if len(title) > 60 else ""),
+        )
+        db.add(row)
+    db.commit()
 
 
 # ==========================================
@@ -120,14 +140,19 @@ async def chat(body: ChatRequest, uid: str = Depends(get_current_user_id)) -> Ch
 
 
 @router.post("/chat/stream")
-async def chat_stream(body: ChatRequest, uid: str = Depends(get_current_user_id)) -> StreamingResponse:
+async def chat_stream(
+    body: ChatRequest,
+    uid: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+) -> StreamingResponse:
     """
     SSE endpoint — emite eventos de tool calls + respuesta final.
     Formato: data: {"type": "tool"|"done"|"error", ...}
     """
     async def generate():
         try:
-            async for evt in _stream_local(body, uid):
+            stream = _stream_agent_engine(body, uid, db) if AGENT_ENGINE_RESOURCE_NAME else _stream_local(body, uid)
+            async for evt in stream:
                 yield f"data: {json.dumps(evt, ensure_ascii=False)}\n\n"
         except Exception as e:
             logger.error("Error en /agente/chat/stream: %s\n%s", e, traceback.format_exc())
@@ -199,6 +224,98 @@ async def _stream_local(body: ChatRequest, user_id: str):
                 await asyncio.sleep(0.022)  # ~45 palabras/seg
     except Exception:
         pass  # Si no es JSON válido, el done lo maneja
+
+    yield {"type": "done", "session_id": sid, "response": response_text}
+
+
+async def _stream_agent_engine(body: ChatRequest, user_id: str, db: Session):
+    """Generador async — yield eventos SSE usando Vertex AI Agent Platform."""
+    agent = _get_remote_agent()
+    loop = asyncio.get_event_loop()
+
+    # Optimistic: si ya tenemos session_id la usamos directo sin verificar.
+    # Solo creamos sesión nueva si no hay ID o si stream_query falla (sesión expirada).
+    def _create_session() -> str:
+        return agent.create_session(user_id=user_id, state={"user_id": user_id})["id"]
+
+    sid = body.session_id
+    is_new = sid is None
+    if is_new:
+        sid = await loop.run_in_executor(None, _create_session)
+
+    response_text = ""
+    queue: asyncio.Queue = asyncio.Queue()
+    _SENTINEL = object()
+
+    def _stream_to_queue(session_id: str):
+        nonlocal response_text
+        try:
+            for event in agent.stream_query(
+                user_id=user_id,
+                session_id=session_id,
+                message=body.message,
+            ):
+                if not isinstance(event, dict):
+                    if isinstance(event, str):
+                        response_text = event
+                    continue
+                parts = (event.get("content") or {}).get("parts", [])
+                for part in parts:
+                    if not isinstance(part, dict):
+                        continue
+                    fn = part.get("functionCall") or part.get("function_call")
+                    if fn and fn.get("name"):
+                        label = _TOOL_LABELS.get(fn["name"], f"{fn['name']}…")
+                        asyncio.run_coroutine_threadsafe(
+                            queue.put({"type": "tool", "tool": fn["name"], "label": label}),
+                            loop,
+                        )
+                    text = part.get("text")
+                    if text:
+                        response_text = text
+        except Exception as e:
+            if "session" in str(e).lower() or "not found" in str(e).lower():
+                asyncio.run_coroutine_threadsafe(queue.put({"type": "_expired"}), loop)
+            else:
+                asyncio.run_coroutine_threadsafe(queue.put({"type": "_error", "msg": str(e)}), loop)
+        finally:
+            asyncio.run_coroutine_threadsafe(queue.put(_SENTINEL), loop)
+
+    fut = loop.run_in_executor(None, _stream_to_queue, sid)
+
+    while True:
+        item = await queue.get()
+        if item is _SENTINEL:
+            break
+        if item.get("type") == "_expired":
+            # Sesión expirada — recrear y reintentar
+            await fut
+            sid = await loop.run_in_executor(None, _create_session)
+            is_new = True
+            response_text = ""
+            queue = asyncio.Queue()
+            fut = loop.run_in_executor(None, _stream_to_queue, sid)
+            continue
+        if item.get("type") == "_error":
+            raise RuntimeError(item["msg"])
+        yield item
+
+    await fut
+
+    try:
+        parsed = json.loads(response_text)
+        text_to_stream = parsed.get("text", "")
+        if text_to_stream:
+            words = text_to_stream.split(" ")
+            for i, word in enumerate(words):
+                chunk = word + (" " if i < len(words) - 1 else "")
+                yield {"type": "token", "text": chunk}
+                await asyncio.sleep(0.022)
+    except Exception:
+        pass
+
+    if is_new:
+        _save_session_to_db(db, user_id, sid, body.message)
 
     yield {"type": "done", "session_id": sid, "response": response_text}
 

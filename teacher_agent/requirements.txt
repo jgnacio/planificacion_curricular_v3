@@ -1,5 +1,5 @@
-google-adk
-google-cloud-aiplatform[agent_engines]
+google-adk==1.33.0
+google-cloud-aiplatform[agent_engines]==1.153.1
 httpx
 duckduckgo-search
 beautifulsoup4

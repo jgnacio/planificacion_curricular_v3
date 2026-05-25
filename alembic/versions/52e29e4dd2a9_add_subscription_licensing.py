@@ -197,13 +197,14 @@ def upgrade() -> None:
     )
     op.create_index(op.f('ix_students_id'), 'students', ['id'], unique=False)
     op.create_index(op.f('ix_students_user_id'), 'students', ['user_id'], unique=False)
-    # alumnos → students: drop old table only if it exists (prod DBs with existing data)
+    # alumnos → students: copy data, leave alumnos intact (drop it manually after verifying)
     bind = op.get_bind()
     inspector = sa.inspect(bind)
     if 'alumnos' in inspector.get_table_names():
-        op.drop_index(op.f('ix_alumnos_id'), table_name='alumnos')
-        op.drop_index(op.f('ix_alumnos_user_id'), table_name='alumnos')
-        op.drop_table('alumnos')
+        op.execute(
+            "INSERT INTO students (id, user_id, nombre_completo, fecha_nacimiento, nivel, grado, notas, created_at) "
+            "SELECT id, user_id, nombre_completo, fecha_nacimiento, nivel, grado, notas, created_at FROM alumnos"
+        )
     with op.batch_alter_table('planificaciones') as batch_op:
         batch_op.add_column(sa.Column('educational_center_id', sa.String(length=36), nullable=True))
         batch_op.create_foreign_key('fk_planificaciones_educational_center', 'educational_centers', ['educational_center_id'], ['id'])

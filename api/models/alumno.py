@@ -12,6 +12,9 @@ class Alumno(Base):
     educational_center_id: Mapped[str | None] = mapped_column(
         String(36), ForeignKey("educational_centers.id"), nullable=True
     )
+    group_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("groups.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     nombre_completo: Mapped[str] = mapped_column(String(200))
     fecha_nacimiento: Mapped[str | None] = mapped_column(String(20), nullable=True)
     nivel: Mapped[str | None] = mapped_column(String(50), nullable=True)

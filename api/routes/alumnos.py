@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from api.auth import get_current_user_id
@@ -10,8 +10,15 @@ router = APIRouter(prefix="/alumnos", tags=["alumnos"])
 
 
 @router.get("/", response_model=list[AlumnoRead])
-def listar(uid: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
-    return db.query(Alumno).filter(Alumno.user_id == uid).order_by(Alumno.nombre_completo).all()
+def listar(
+    group_id: str | None = Query(None),
+    uid: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+):
+    q = db.query(Alumno).filter(Alumno.user_id == uid)
+    if group_id is not None:
+        q = q.filter(Alumno.group_id == group_id)
+    return q.order_by(Alumno.nombre_completo).all()
 
 
 @router.post("/", response_model=AlumnoRead, status_code=201)
