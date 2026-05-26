@@ -130,7 +130,8 @@ def crear_planificacion(
     Cada momento debe incluir meta_aprendizaje.
     En el caso de secuencia (type='secuencia'), chat_exportado debe contener el objeto secuencia
     serializado como JSON string (con espacio, unidad_curricular, competencias_generales,
-    competencias_especificas, criterios_de_logro, meta_aprendizaje, contenido, evaluaciones, actividades).
+    competencias_especificas, criterios_de_logro, meta_aprendizaje, contenido, evaluaciones,
+    actividades donde cada actividad tiene la misma estructura que una planificación completa con momentos).
     """
     user_id = tool_context.state.get("user_id", "")
     payload = {
@@ -816,14 +817,6 @@ class PlanificacionTable(BaseModel):
     competencias_mcn: List[str] = Field(default=[], description="Competencias MCN vinculadas")
 
 
-class SecuenciaActividad(BaseModel):
-    numero: int = Field(default=0, description="Número de la actividad (1, 2, 3...)")
-    recorte: str = Field(default="", description="Título o nombre de la actividad")
-    meta_aprendizaje: str = Field(default="", description="Qué aprenden o logran los alumnos en esta actividad, en términos concretos y observables")
-    plan_aprendizaje: List[str] = Field(default=[], description="Pasos detallados de la actividad como lista de strings")
-    recursos: str = Field(default="", description="Recursos y materiales necesarios para esta actividad (textos, láminas, fichas, etc.)")
-
-
 class SecuenciaTable(BaseModel):
     espacio: str = Field(default="", description="Nombre del espacio curricular (e.g. 'Comunicación')")
     unidad_curricular: str = Field(default="", description="Nombre de la unidad curricular (e.g. 'Lengua Española')")
@@ -833,7 +826,7 @@ class SecuenciaTable(BaseModel):
     meta_aprendizaje: str = Field(default="", description="Meta de aprendizaje global de toda la secuencia, en presente plural")
     contenido: str = Field(default="", description="Contenido textual del programa para este espacio")
     evaluaciones: str = Field(default="", description="Criterios e instrumentos de evaluación (puede quedar vacío)")
-    actividades: List[SecuenciaActividad] = Field(default=[], description="Lista de actividades numeradas de la secuencia")
+    actividades: List[PlanificacionTable] = Field(default=[], description="Lista de actividades de la secuencia. Cada una tiene la misma estructura que una planificación completa con momentos: Inicio, Desarrollo y Cierre.")
 
 
 class FacilitadorResponse(BaseModel):
@@ -1056,16 +1049,45 @@ Cuando la docente pida explícitamente una **secuencia de actividades**:
     "evaluaciones": "",
     "actividades": [
       {
-        "numero": 1,
-        "recorte": "El misterio de la anécdota",
-        "meta_aprendizaje": "Los estudiantes identifican información literal (quién, dónde, cuándo) a través del subrayado",
-        "plan_aprendizaje": [
-          "Se presenta el texto 'Un recreo inolvidable' y se indaga sobre su tipo y estructura con preguntas inferenciales: ¿Qué tipo de texto será? ¿Qué elementos del texto me muestran eso?",
-          "Lectura individual y colectiva párrafo a párrafo, analizando la información que cada uno aporta.",
-          "Intervención docente: a medida que los estudiantes extraen información, se guía con preguntas de información literal: ¿Dónde sucedió? ¿Qué sucedió? ¿Cómo lograron resolverlo?",
-          "Cierre: los alumnos subrayan información relevante y responden una pregunta de información explícita y una de inferencia textual."
+        "titulo": "El misterio de la anécdota",
+        "grupo": "Grupo de 5.to grado (Colegio 01)",
+        "justificacion": "Esta actividad introduce la lectura inferencial desde un texto narrativo cercano al contexto escolar, activando conocimientos previos antes de avanzar hacia textos más complejos.",
+        "metodologia": "Lectura compartida y andamiada",
+        "metodologia_descripcion": "La docente guía la lectura párrafo a párrafo, modelando el proceso inferencial con preguntas. Los estudiantes responden primero en voz alta y luego de forma escrita individual.",
+        "momentos": [
+          {
+            "momento": "Inicio",
+            "duracion": "5 min",
+            "meta_aprendizaje": "Activar conocimientos previos sobre el texto narrativo y sus características.",
+            "actividad": "Se presenta el texto 'Un recreo inolvidable' y se indaga sobre su tipo y estructura con preguntas inferenciales: ¿Qué tipo de texto será? ¿Qué elementos del texto me muestran eso?",
+            "rol_docente": "Presenta el texto, lanza las preguntas disparadoras y registra las hipótesis en el pizarrón.",
+            "recursos": "Texto impreso 'Un recreo inolvidable', pizarrón y marcadores."
+          },
+          {
+            "momento": "Desarrollo",
+            "duracion": "25 min",
+            "meta_aprendizaje": "Identificar información literal (quién, dónde, cuándo) a través del subrayado guiado.",
+            "actividad": "Lectura individual y colectiva párrafo a párrafo, analizando la información que cada uno aporta. A medida que los estudiantes extraen información, se guía con preguntas de información literal: ¿Dónde sucedió? ¿Qué sucedió? ¿Cómo lograron resolverlo?",
+            "rol_docente": "Facilita la lectura compartida, hace preguntas orientadoras y apoya a los estudiantes que requieren andamiaje.",
+            "recursos": "Texto impreso, lápices de colores para subrayado."
+          },
+          {
+            "momento": "Cierre",
+            "duracion": "10 min",
+            "meta_aprendizaje": "Responder preguntas de información explícita e inferencial demostrando comprensión del texto.",
+            "actividad": "Los alumnos subrayan información relevante y responden una pregunta de información explícita y una de inferencia textual en sus cuadernos.",
+            "rol_docente": "Circula revisando las respuestas y ofrece retroalimentación oral.",
+            "recursos": "Cuadernos de los estudiantes."
+          }
         ],
-        "recursos": "Texto 'Un recreo inolvidable', pizarrón"
+        "ce_codigo": "CE1",
+        "ce_texto": "Narra, expone, describe, argumenta, explica, dialoga a través de la incorporación de vocabulario específico.",
+        "contenido": "Las estrategias discursivas. La construcción de sentido: el vínculo entre párrafos.",
+        "criterio_de_logro": "Responde correctamente preguntas de información explícita e inferencial sobre el texto leído.",
+        "espacio": "Comunicación",
+        "unidad": "Lengua Española",
+        "tramo": 4,
+        "competencias_mcn": ["Comunicación", "Pensamiento crítico"]
       }
     ]
   }
@@ -1075,7 +1097,7 @@ Cuando la docente pida explícitamente una **secuencia de actividades**:
 Al recibir [[Sí, guardar]]:
 1. Si no tenés `group_id` y `project_id` en el contexto de la conversación, llamá `list_groups()` y luego `list_projects(group_id)` para obtenerlos. Elegí el que corresponda al contexto.
 2. Llamá `create_sequence(group_id=<group_id>, project_id=<project_id>, name=<unidad_curricular>, learning_goal=<meta_aprendizaje>)`. Guardá el `sequence_id` retornado.
-3. Para CADA actividad del array `actividades`, llamá `create_activity(title=<recorte>, content=<JSON de esa actividad como string>, group_id=<group_id>, project_id=<project_id>, sequence_id=<sequence_id>)`.
+3. Para CADA actividad del array `actividades`, llamá `create_activity(title=<titulo>, content=<JSON de esa actividad como string>, group_id=<group_id>, project_id=<project_id>, sequence_id=<sequence_id>)`.
 4. Una vez guardadas todas, confirmá cuántas actividades se crearon exitosamente.
 
 ### Tokens interactivos

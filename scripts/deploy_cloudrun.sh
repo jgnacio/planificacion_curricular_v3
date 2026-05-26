@@ -21,8 +21,6 @@ set -o allexport
 source <(grep -v '^\s*#' "$ENV_FILE" | grep -v '^\s*$')
 set +o allexport
 
-# Overrides para producción
-GOOGLE_GENAI_USE_VERTEXAI=0  # usa AI Studio (GOOGLE_API_KEY), no Vertex AI
 INTERNAL_API_URL="${INTERNAL_API_URL:-http://localhost:8000}"  # se actualiza post-deploy
 
 SERVICE_NAME="facilitador-api"
@@ -32,12 +30,13 @@ PROJECT="facilitador-docente"
 echo "Deploying $SERVICE_NAME to Cloud Run ($REGION)..."
 
 # Construir lista de env vars — omitir las vacías para no sobreescribir defaults
-ENV_VARS="APP_MODULE=api.main_data:app"
+ENV_VARS="APP_MODULE=api.main:app"
 ENV_VARS+=",GOOGLE_CLOUD_PROJECT=${GOOGLE_CLOUD_PROJECT}"
 ENV_VARS+=",INTERNAL_API_KEY=${INTERNAL_API_KEY}"
 ENV_VARS+=",FRONTEND_DOMAIN=${FRONTEND_DOMAIN}"
-[ -n "${CLERK_JWKS_URL:-}" ]  && ENV_VARS+=",CLERK_JWKS_URL=${CLERK_JWKS_URL}"
-[ -n "${DATABASE_URL:-}" ]    && ENV_VARS+=",DATABASE_URL=${DATABASE_URL}"
+[ -n "${CLERK_JWKS_URL:-}" ]               && ENV_VARS+=",CLERK_JWKS_URL=${CLERK_JWKS_URL}"
+[ -n "${DATABASE_URL:-}" ]                 && ENV_VARS+=",DATABASE_URL=${DATABASE_URL}"
+[ -n "${AGENT_ENGINE_RESOURCE_NAME:-}" ]   && ENV_VARS+=",AGENT_ENGINE_RESOURCE_NAME=${AGENT_ENGINE_RESOURCE_NAME}"
 
 gcloud run deploy "$SERVICE_NAME" \
   --source "$ROOT_DIR" \
