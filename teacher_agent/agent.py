@@ -668,8 +668,8 @@ def consultar_curriculo_estructurado(espacio: str, tramo: int, grado: str) -> di
         espacio: Nombre de la materia o unidad curricular específica, e.g. "Lengua Española",
                  "Matemática", "Ciencias Naturales", "Historia", "Inglés".
                  NUNCA pasar el nombre del espacio ("Espacio de Comunicación", etc.) — siempre la materia.
-        tramo: Número de tramo — 3 (para 3.o y 4.o grado) o 4 (para 5.o y 6.o grado)
-        grado: Grado específico, e.g. "3", "4", "5", "6" (o "todos" para obtener todo el tramo)
+        tramo: Número de tramo — 1 (Educación Inicial), 2 (1° y 2° grado), 3 (3° y 4° grado), 4 (5° y 6° grado)
+        grado: Grado específico — Tramo 1: "3_anios"/"4_anios"/"5_anios"; Tramo 2: "1"/"2"; Tramo 3: "3"/"4"; Tramo 4: "5"/"6" (o "todos" para todo el tramo)
 
     Returns:
         dict con 'status', 'espacio', 'tramo', 'competencias_especificas',
@@ -680,7 +680,7 @@ def consultar_curriculo_estructurado(espacio: str, tramo: int, grado: str) -> di
         data = _load_curriculum()
         tramo_key = f"tramo_{tramo}"
         if tramo_key not in data.get("tramos", {}):
-            return {"status": "error", "error_message": f"Tramo {tramo} no existe. Usá 3 o 4."}
+            return {"status": "error", "error_message": f"Tramo {tramo} no existe. Usá 1, 2, 3 o 4."}
 
         espacios = data["tramos"][tramo_key]["espacios"]
         esp_key, esp_data = _find_espacio(espacios, espacio)
@@ -718,8 +718,10 @@ def consultar_curriculo_estructurado(espacio: str, tramo: int, grado: str) -> di
 
         # Build grade keys to return
         grade_suffix_map = {
+            "1": "1er_grado", "2": "2do_grado",
             "3": "3er_grado", "4": "4to_grado",
             "5": "5to_grado", "6": "6to_grado",
+            "3_anios": "nivel_3_anios", "4_anios": "nivel_4_anios", "5_anios": "nivel_5_anios",
         }
         grade_key = grade_suffix_map.get(str(grado).strip(), None)
 
@@ -904,8 +906,17 @@ El programa EBI exige metodologías activas en todas las planificaciones. Esto n
 
 ### Tablas de referencia
 
-Grado → Tramo: 3° y 4° = Tramo 3 | 5° y 6° = Tramo 4.
-Neo4j tiene solo 2do ciclo (Tramo 3 y Tramo 4). Si mencionan 1° o 2°, informá que aún no están disponibles.
+Grado → Tramo:
+- Educación Inicial (3, 4, 5 años) = Tramo 1
+- 1° y 2° grado = Tramo 2
+- 3° y 4° grado = Tramo 3
+- 5° y 6° grado = Tramo 4
+
+Argumentos de grado para `consultar_curriculo_estructurado`:
+- Tramo 1: "3_anios", "4_anios", "5_anios" (o "todos" para ver todo el tramo)
+- Tramo 2: "1", "2" (o "todos")
+- Tramo 3: "3", "4" (o "todos")
+- Tramo 4: "5", "6" (o "todos")
 
 Palabras clave → Espacio / Unidad:
 - escritura, lectura, texto, lengua, oral, argumentativo, narrativo → Espacio de Comunicación / Lengua Española

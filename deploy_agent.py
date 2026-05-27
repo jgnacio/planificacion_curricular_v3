@@ -68,7 +68,7 @@ AGENT_CONFIG = {
     },
 }
 
-vertexai.init(project=PROJECT, location=LOCATION)
+vertexai.init(project=PROJECT, location=LOCATION, staging_bucket=AGENT_CONFIG["staging_bucket"])
 
 print(f"  Project : {PROJECT}")
 print(f"  Location: {LOCATION}")
@@ -79,7 +79,14 @@ if EXISTING_RESOURCE_NAME:
     print("Sessions will be preserved.")
     print()
     remote_agent = agent_engines.get(EXISTING_RESOURCE_NAME)
-    remote_agent.update(agent=root_agent, config=AGENT_CONFIG)
+    remote_agent.update(
+        agent_engine=root_agent,
+        display_name=AGENT_CONFIG["display_name"],
+        description=AGENT_CONFIG["description"],
+        requirements=AGENT_CONFIG["requirements"],
+        extra_packages=AGENT_CONFIG["extra_packages"],
+        env_vars=AGENT_CONFIG["env_vars"],
+    )
     resource_name = remote_agent.gca_resource.name
     print()
     print("Agent updated successfully!")
