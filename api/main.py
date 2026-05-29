@@ -1,11 +1,8 @@
-import os
 from dotenv import load_dotenv
 load_dotenv()
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
-from fastapi.staticfiles import StaticFiles
-
 from api.database import Base, engine
 import api.models.alumno               # noqa: F401
 import api.models.planificacion        # noqa: F401
@@ -18,11 +15,13 @@ import api.models.integrative_project  # noqa: F401
 import api.models.activity_sequence    # noqa: F401
 import api.models.activity             # noqa: F401
 import api.models.chat_session         # noqa: F401
+import api.models.student_report       # noqa: F401
 from api.routes import curriculum, alumnos
 from api.routes import agente
 from api.routes import agente_sessions
-from api.routes import institutions, billing, subscriptions, webhooks, educational_centers, students
+from api.routes import access, institutions, billing, subscriptions, webhooks, educational_centers, students
 from api.routes import groups, sequences, activities
+from api.routes import student_reports
 
 # Create SQLite tables on startup
 Base.metadata.create_all(bind=engine)
@@ -41,15 +40,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Serve PDFs as static files so Flutter can download and open them
-_pdfs_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "pdfs")
-if os.path.isdir(_pdfs_dir):
-    app.mount("/pdfs", StaticFiles(directory=_pdfs_dir), name="pdfs")
-
 app.include_router(curriculum.router)
 app.include_router(alumnos.router)
 app.include_router(agente.router)
 app.include_router(agente_sessions.router)
+app.include_router(access.router)
 app.include_router(institutions.router)
 app.include_router(billing.router)
 app.include_router(subscriptions.router)
@@ -59,6 +54,7 @@ app.include_router(students.router)
 app.include_router(groups.router)
 app.include_router(sequences.router)
 app.include_router(activities.router)
+app.include_router(student_reports.router)
 
 
 def _custom_openapi():

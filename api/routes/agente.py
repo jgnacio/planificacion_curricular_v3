@@ -10,7 +10,8 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from api.auth import get_current_user_id
+from api.access_control import require_agent_access
+from api.auth import UserContext
 from api.database import get_db
 
 logger = logging.getLogger(__name__)
@@ -120,7 +121,11 @@ _TOOL_LABELS: dict[str, str] = {
 # ==========================================
 
 @router.post("/chat", response_model=ChatResponse)
-async def chat(body: ChatRequest, uid: str = Depends(get_current_user_id)) -> ChatResponse:
+async def chat(
+    body: ChatRequest,
+    user: UserContext = Depends(require_agent_access),
+) -> ChatResponse:
+    uid = user.user_id
     """
     Envía un mensaje al agente Facilitador Docente EBI.
 
@@ -142,9 +147,10 @@ async def chat(body: ChatRequest, uid: str = Depends(get_current_user_id)) -> Ch
 @router.post("/chat/stream")
 async def chat_stream(
     body: ChatRequest,
-    uid: str = Depends(get_current_user_id),
+    user: UserContext = Depends(require_agent_access),
     db: Session = Depends(get_db),
 ) -> StreamingResponse:
+    uid = user.user_id
     """
     SSE endpoint — emite eventos de tool calls + respuesta final.
     Formato: data: {"type": "tool"|"done"|"error", ...}

@@ -14,6 +14,7 @@ from api.models.group import Group
 from api.models.integrative_project import IntegrativeProject
 from api.models.activity_sequence import ActivitySequence
 from api.models.activity import Activity
+from api.models.student_report import StudentReport
 
 __all__ = [
     "Alumno",
@@ -32,4 +33,5 @@ __all__ = [
     "IntegrativeProject",
     "ActivitySequence",
     "Activity",
+    "StudentReport",
 ]

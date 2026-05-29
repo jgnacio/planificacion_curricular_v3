@@ -12,7 +12,6 @@ from typing import List
 import httpx
 import json
 import unicodedata
-from bs4 import BeautifulSoup
 from duckduckgo_search import DDGS
 
 load_dotenv()
@@ -74,6 +73,38 @@ class _GeminiAIStudio(Gemini):
 
 def _internal_headers(user_id: str) -> dict:
     return {"X-Internal-Key": INTERNAL_API_KEY, "Content-Type": "application/json"}
+
+
+def obtener_informe_nee(tool_context: ToolContext, alumno_id: int) -> dict:
+    """
+    Obtiene el informe NEE más reciente de un alumno (diagnóstico y recomendaciones del especialista).
+    Llamá esta herramienta cuando estés generando una planificación y algún alumno del grupo
+    tenga necesidades educativas especiales registradas. Usá el diagnóstico y las recomendaciones
+    para adaptar las estrategias de la planificación de forma natural y pedagógica.
+    NO uses esta herramienta si el alumno no tiene informes NEE.
+    """
+    user_id = tool_context.state.get("user_id", "")
+    try:
+        r = httpx.get(
+            f"{INTERNAL_API_URL}/alumnos/{alumno_id}/informes",
+            params={"user_id": user_id},
+            headers=_internal_headers(user_id),
+            timeout=10.0,
+        )
+        r.raise_for_status()
+        informes = r.json()
+        if not informes:
+            return {"status": "sin_nee", "message": "Este alumno no tiene informes NEE registrados."}
+        ultimo = informes[0]
+        return {
+            "status": "success",
+            "alumno_id": alumno_id,
+            "diagnostico": (ultimo.get("diagnostico") or "")[:1000],
+            "recomendaciones_especialista": (ultimo.get("recomendaciones_especialista") or "")[:1000],
+            "fecha": ultimo.get("updated_at") or ultimo.get("created_at"),
+        }
+    except Exception as e:
+        return {"status": "error", "error_message": str(e)}
 
 
 def listar_alumnos(tool_context: ToolContext, nivel: str = "", grado: str = "", group_id: str = "") -> dict:
@@ -172,25 +203,8 @@ def buscar_en_internet(consulta: str) -> dict:
     Siempre llamá primero a las herramientas de la base de datos curricular y usá esta
     para ampliar el contexto con recursos externos.
     """
-    _HEADERS = {
-        "User-Agent": (
-            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
-            "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"
-        )
-    }
-    _TIMEOUT = 8.0
-    _MAX_CHARS = 2000  # max chars extracted per page
-
-    def _extract_text(html: str) -> str:
-        soup = BeautifulSoup(html, "html.parser")
-        for tag in soup(["script", "style", "nav", "footer", "header", "aside"]):
-            tag.decompose()
-        # Prefer article/main content blocks
-        main = soup.find("article") or soup.find("main") or soup.body
-        if not main:
-            return ""
-        text = " ".join(main.get_text(separator=" ").split())
-        return text[:_MAX_CHARS]
+    _TIMEOUT = 10.0
+    _MAX_CHARS = 3000  # Jina devuelve markdown limpio, podemos ser más generosos
 
     try:
         with DDGS() as ddgs:
@@ -208,9 +222,9 @@ def buscar_en_internet(consulta: str) -> dict:
         if not url:
             return None
         try:
-            with httpx.Client(headers=_HEADERS, timeout=_TIMEOUT, follow_redirects=True) as client:
-                resp = client.get(url)
-                content = _extract_text(resp.text) if resp.status_code == 200 else snippet
+            with httpx.Client(timeout=_TIMEOUT, follow_redirects=True) as client:
+                resp = client.get(f"https://r.jina.ai/{url}")
+                content = resp.text[:_MAX_CHARS] if resp.status_code == 200 else snippet
         except Exception:
             content = snippet
         return {"titulo": title, "url": url, "contenido": content} if content else None
@@ -963,6 +977,9 @@ Si dice "Quiero cambiar algo", preguntá qué quiere cambiar y ajustá (devolvé
 
 **PASO 3 — Generar planificación (al recibir la temática de PASO 2b)**
 Llamá `listar_alumnos()` para conocer el grupo real. Si la conversación tiene un `group_id` en el contexto (porque la docente está trabajando dentro de un grupo específico), pasalo como `listar_alumnos(group_id=<group_id>)` para obtener solo los alumnos de ese grupo.
+
+Luego, para CADA alumno del grupo, revisá si el objeto alumno tiene informes NEE asociados. Si `listar_alumnos` devuelve alumnos con campo `tiene_nee: true` o si la docente mencionó que hay alumnos con necesidades especiales, llamá `obtener_informe_nee(alumno_id=<id>)` para cada uno. Incorporá el diagnóstico y las recomendaciones del especialista en la planificación de forma natural: adaptá las consignas, los materiales, los tiempos y el rol docente según las indicaciones del especialista. No menciones explícitamente el diagnóstico en el texto de la planificación — simplemente reflejá las adaptaciones como parte del diseño pedagógico.
+
 Usá los datos curriculares y metodológicos ya obtenidos en PASO 1 — NO volvás a llamar ninguna tool de currículo.
 Contextualizá todas las actividades usando la temática que indicó la docente.
 
@@ -1039,7 +1056,7 @@ Al recibir [[Sí, guardar]]: llamá `create_activity(title=<titulo_de_la_planifi
 
 Cuando la docente pida explícitamente una **secuencia de actividades**:
 
-1. Primero, si la conversación ya tiene un `group_id` en el contexto (porque se está trabajando dentro de un grupo específico), llamá `listar_alumnos(group_id=<group_id>)` para conocer los alumnos del grupo y contextualizar mejor las actividades.
+1. Primero, si la conversación ya tiene un `group_id` en el contexto (porque se está trabajando dentro de un grupo específico), llamá `listar_alumnos(group_id=<group_id>)` para conocer los alumnos del grupo y contextualizar mejor las actividades. Si algún alumno tiene NEE registradas, llamá `obtener_informe_nee(alumno_id=<id>)` para incorporar las adaptaciones a lo largo de toda la secuencia.
 2. Llamá `consultar_curriculo_estructurado()` para obtener el contenido curricular.
 3. Generá entre 3 y 6 actividades numeradas con plan detallado en bullets.
 4. Respondé con `type: "secuencia"` y el objeto `secuencia` completo.
@@ -1161,9 +1178,10 @@ root_agent = Agent(
         # Herramientas de currículo y búsqueda
         consultar_curriculo_estructurado,
         buscar_en_internet,
-        consultar_curriculo_oficial,
-        # Alumnos
+        # consultar_curriculo_oficial,  # Open Notebook — desconectado, reconectar cuando esté en prod
+        # Alumnos y NEE
         listar_alumnos,
+        obtener_informe_nee,
         # Jerarquía EBI
         list_groups,
         list_projects,
