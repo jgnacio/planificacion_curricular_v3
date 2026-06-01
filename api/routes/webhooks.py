@@ -18,6 +18,7 @@ from api.models.billing import (
     InstitutionBillingCycle,
     MpPlan,
 )
+from api.models.user_profile import UserProfile
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
@@ -101,7 +102,17 @@ def _handle_preapproval_event(data_id: str, db: Session) -> None:
         return
 
     # No existe localmente — crear si tenemos el plan y el usuario
-    if not (payer_id and mp_plan_id and mp_status == "authorized"):
+    if not (mp_plan_id and mp_status == "authorized"):
+        return
+
+    # Resolver user_id: external_reference (Clerk ID) tiene prioridad, fallback por email
+    if not payer_id:
+        payer_email = mp_data.get("payer_email", "")
+        if payer_email:
+            profile = db.query(UserProfile).filter(UserProfile.email == payer_email).first()
+            payer_id = profile.clerk_user_id if profile else ""
+    if not payer_id:
+        logger.warning("Webhook preapproval %s: no payer_id or matching user email", data_id)
         return
 
     plan = db.query(MpPlan).filter(MpPlan.mp_plan_id == mp_plan_id).first()

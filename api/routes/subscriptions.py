@@ -1,6 +1,7 @@
 import logging
 import os
 from datetime import datetime, UTC
+from urllib.parse import urlencode
 
 import mercadopago
 from fastapi import APIRouter, Depends, HTTPException
@@ -101,39 +102,33 @@ def create_checkout(
             detail="Plan not synced to Mercado Pago — admin must sync it first",
         )
 
-    profile = db.query(UserProfile).filter(UserProfile.clerk_user_id == user.user_id).first()
-    if not profile:
-        raise HTTPException(status_code=400, detail="User profile not found — complete your profile first")
-
+    # Obtener init_point real del plan desde MP
+    # MP devuelve init_point (prod) y sandbox_init_point (test) — hay que usar el correcto
     sdk = _get_sdk()
-    preapproval_data = {
-        "preapproval_plan_id": plan.mp_plan_id,
-        "reason": plan.display_name,
-        "payer_email": profile.email,
-        "back_url": f"{os.getenv('FRONT_URL', 'http://localhost:3000')}/subscriptions/success",
-        "external_reference": user.user_id,
-        "status": "pending",
-    }
+    plan_result = sdk.plan().get(plan.mp_plan_id)
+    if plan_result.get("status") != 200:
+        logger.error("MP plan fetch failed for %s: %s", plan.mp_plan_id, plan_result.get("response"))
+        raise HTTPException(
+            status_code=502,
+            detail=f"Cannot fetch plan from MP: {plan_result.get('response')}",
+        )
 
-    result = sdk.subscription().create(preapproval_data)
-    if result["status"] not in (200, 201):
-        logger.error("MP preapproval failed: status=%s body=%s", result["status"], result.get("response"))
-        raise HTTPException(status_code=502, detail=f"MP preapproval creation failed: {result.get('response')}")
+    mp_plan_data = plan_result["response"]
+    token = os.getenv("MP_ACCESS_TOKEN", "")
+    is_test = token.startswith("TEST-")
+    init_point: str = (
+        mp_plan_data.get("sandbox_init_point", "") if is_test
+        else mp_plan_data.get("init_point", "")
+    ) or mp_plan_data.get("init_point", "")
 
-    response_data = result["response"]
-    sub = IndividualSubscription(
-        user_id=user.user_id,
-        mp_plan_id=plan.id,
-        mp_preapproval_id=response_data["id"],
-        status="pending",
-    )
-    db.add(sub)
-    db.commit()
+    if not init_point:
+        params = urlencode({"preapproval_plan_id": plan.mp_plan_id, "external_reference": user.user_id})
+        init_point = f"https://www.mercadopago.com/subscriptions/checkout?{params}"
+    else:
+        separator = "&" if "?" in init_point else "?"
+        init_point = f"{init_point}{separator}external_reference={user.user_id}"
 
-    return CheckoutResponse(
-        init_point=response_data["init_point"],
-        preapproval_id=response_data["id"],
-    )
+    return CheckoutResponse(init_point=init_point, preapproval_id="")
 
 
 def _update_mp_status(preapproval_id: str, new_status: str) -> None:

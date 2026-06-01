@@ -9,7 +9,7 @@ class CheckoutRequest(BaseModel):
 
 class CheckoutResponse(BaseModel):
     init_point: str
-    preapproval_id: str
+    preapproval_id: str = ""
 
 
 class SubscriptionRead(BaseModel):
