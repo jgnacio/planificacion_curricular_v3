@@ -102,33 +102,40 @@ def create_checkout(
             detail="Plan not synced to Mercado Pago — admin must sync it first",
         )
 
-    # Obtener init_point real del plan desde MP
-    # MP devuelve init_point (prod) y sandbox_init_point (test) — hay que usar el correcto
+    # Crear preapproval server-side con external_reference para que el webhook identifique al usuario.
+    # URL params no funcionan — MP no los propaga al preapproval. Server-side sí.
+    front_url = os.getenv("FRONT_URL", "https://app.facilitadordocente.com")
     sdk = _get_sdk()
-    plan_result = sdk.plan().get(plan.mp_plan_id)
-    if plan_result.get("status") != 200:
-        logger.error("MP plan fetch failed for %s: %s", plan.mp_plan_id, plan_result.get("response"))
-        raise HTTPException(
-            status_code=502,
-            detail=f"Cannot fetch plan from MP: {plan_result.get('response')}",
-        )
+    preapproval_data = {
+        "preapproval_plan_id": plan.mp_plan_id,
+        "reason": plan.display_name,
+        "external_reference": user.user_id,
+        "back_url": f"{front_url}/subscriptions/success",
+        "status": "pending",
+    }
+    result = sdk.subscription().create(preapproval_data)
 
-    mp_plan_data = plan_result["response"]
-    token = os.getenv("MP_ACCESS_TOKEN", "")
-    is_test = token.startswith("TEST-")
-    init_point: str = (
-        mp_plan_data.get("sandbox_init_point", "") if is_test
-        else mp_plan_data.get("init_point", "")
-    ) or mp_plan_data.get("init_point", "")
+    if result.get("status") not in (200, 201):
+        # Fallback: redirect al hosted checkout del plan
+        logger.warning("Server-side preapproval failed (%s), fallback to hosted checkout", result.get("status"))
+        plan_result = sdk.plan().get(plan.mp_plan_id)
+        mp_plan_data = plan_result.get("response", {})
+        token = os.getenv("MP_ACCESS_TOKEN", "")
+        is_test = token.startswith("TEST-")
+        init_point: str = (
+            mp_plan_data.get("sandbox_init_point", "") if is_test
+            else mp_plan_data.get("init_point", "")
+        ) or mp_plan_data.get("init_point", "")
+        if not init_point:
+            params = urlencode({"preapproval_plan_id": plan.mp_plan_id, "external_reference": user.user_id})
+            init_point = f"https://www.mercadopago.com/subscriptions/checkout?{params}"
+        else:
+            sep = "&" if "?" in init_point else "?"
+            init_point = f"{init_point}{sep}external_reference={user.user_id}"
+        return CheckoutResponse(init_point=init_point, preapproval_id="")
 
-    if not init_point:
-        params = urlencode({"preapproval_plan_id": plan.mp_plan_id, "external_reference": user.user_id})
-        init_point = f"https://www.mercadopago.com/subscriptions/checkout?{params}"
-    else:
-        separator = "&" if "?" in init_point else "?"
-        init_point = f"{init_point}{separator}external_reference={user.user_id}"
-
-    return CheckoutResponse(init_point=init_point, preapproval_id="")
+    response = result["response"]
+    return CheckoutResponse(init_point=response["init_point"], preapproval_id=response["id"])
 
 
 def _update_mp_status(preapproval_id: str, new_status: str) -> None:
