@@ -16,12 +16,14 @@ import api.models.activity_sequence    # noqa: F401
 import api.models.activity             # noqa: F401
 import api.models.chat_session         # noqa: F401
 import api.models.student_report       # noqa: F401
+import api.models.descripcion_fundada  # noqa: F401
 from api.routes import curriculum, alumnos
 from api.routes import agente
 from api.routes import agente_sessions
 from api.routes import access, institutions, billing, subscriptions, webhooks, educational_centers, students
 from api.routes import groups, sequences, activities
 from api.routes import student_reports
+from api.routes import descripciones_fundadas
 
 # Create SQLite tables on startup
 Base.metadata.create_all(bind=engine)
@@ -55,6 +57,7 @@ app.include_router(groups.router)
 app.include_router(sequences.router)
 app.include_router(activities.router)
 app.include_router(student_reports.router)
+app.include_router(descripciones_fundadas.router)
 
 
 def _custom_openapi():

@@ -15,6 +15,7 @@ from api.models.integrative_project import IntegrativeProject
 from api.models.activity_sequence import ActivitySequence
 from api.models.activity import Activity
 from api.models.student_report import StudentReport
+from api.models.descripcion_fundada import DescripcionFundada
 
 __all__ = [
     "Alumno",
@@ -34,4 +35,5 @@ __all__ = [
     "ActivitySequence",
     "Activity",
     "StudentReport",
+    "DescripcionFundada",
 ]

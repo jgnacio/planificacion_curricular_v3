@@ -24,8 +24,8 @@ echo "==> Checking current Alembic state on Supabase..."
 DATABASE_URL="$SUPABASE_DATABASE_URL" uv run alembic current 2>&1 || true
 
 echo ""
-echo "==> Stamping at c4f2e8b91a3d (all migrations already applied on Supabase)..."
-DATABASE_URL="$SUPABASE_DATABASE_URL" uv run alembic stamp c4f2e8b91a3d
+echo "==> Stamping at add_descripciones_fundadas (all migrations already applied on Supabase via create_all)..."
+DATABASE_URL="$SUPABASE_DATABASE_URL" uv run alembic stamp add_descripciones_fundadas
 
 echo ""
 echo "==> Done. Final state:"
