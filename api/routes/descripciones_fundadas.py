@@ -1,11 +1,15 @@
+import logging
 import os
 from datetime import datetime, UTC
 
 from fastapi import APIRouter, Depends, HTTPException
+
+logger = logging.getLogger(__name__)
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from api.auth import get_current_user_id
+from api.access_control import require_max_plan
+from api.auth import get_current_user_id, UserContext
 from api.database import get_db
 from api.models.alumno import Alumno
 from api.models.descripcion_fundada import DescripcionFundada
@@ -16,7 +20,15 @@ from api.schemas.descripcion_fundada import (
     DescripcionFundadaUpdate,
 )
 
-router = APIRouter(tags=["descripciones_fundadas"])
+router = APIRouter(tags=["descripciones_fundadas"], dependencies=[Depends(require_max_plan)])
+
+
+def _gemini_client():
+    from google import genai
+    api_key = os.getenv("AI_STUDIO_API_KEY") or os.getenv("GOOGLE_API_KEY", "")
+    if not api_key:
+        raise HTTPException(status_code=500, detail="API key de Google AI no configurada.")
+    return genai.Client(api_key=api_key, vertexai=False)
 
 NIVEL_LABELS = {
     1: "Avance Mínimo (calificación 1-2): el estudiante evidencia dificultades para avanzar en los logros propuestos en la unidad curricular",
@@ -207,13 +219,9 @@ Redacta la descripción fundada completa en español, en un solo bloque de texto
 """
 
     try:
-        from google import genai
         from google.genai import types as genai_types
 
-        project = os.environ.get("GOOGLE_CLOUD_PROJECT", "")
-        location = os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1")
-
-        client = genai.Client(vertexai=True, project=project, location=location)
+        client = _gemini_client()
         response = client.models.generate_content(
             model="gemini-2.0-flash",
             contents=prompt,
@@ -223,7 +231,10 @@ Redacta la descripción fundada completa en español, en un solo bloque de texto
             ),
         )
         return {"descripcion_generada": response.text.strip()}
+    except HTTPException:
+        raise
     except Exception as e:
+        logger.exception("Error en generar descripción: %s", e)
         raise HTTPException(status_code=500, detail=f"Error al generar la descripción: {str(e)}")
 
 
@@ -287,13 +298,9 @@ Redacta la descripción fundada completa en español, en un solo bloque de texto
 """
 
     try:
-        from google import genai
         from google.genai import types as genai_types
 
-        project = os.environ.get("GOOGLE_CLOUD_PROJECT", "")
-        location = os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1")
-
-        client = genai.Client(vertexai=True, project=project, location=location)
+        client = _gemini_client()
         response = client.models.generate_content(
             model="gemini-2.0-flash",
             contents=prompt,
@@ -303,7 +310,10 @@ Redacta la descripción fundada completa en español, en un solo bloque de texto
             ),
         )
         texto_generado = response.text.strip()
+    except HTTPException:
+        raise
     except Exception as e:
+        logger.exception("Error en generar descripción: %s", e)
         raise HTTPException(status_code=500, detail=f"Error al generar la descripción: {str(e)}")
 
     desc.descripcion_generada = texto_generado

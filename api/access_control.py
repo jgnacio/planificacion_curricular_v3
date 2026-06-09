@@ -20,6 +20,40 @@ from api.models.billing import (
 
 AccessKind = Literal["individual", "institutional"]
 
+MAX_PLAN_CODES = {"max_mensual", "max_anual"}
+
+
+def check_max_plan_access(user_id: str, db: Session) -> bool:
+    """True si el usuario tiene una suscripción MAX activa."""
+    from api.models.billing import MpPlan
+    sub = (
+        db.query(IndividualSubscription)
+        .join(MpPlan, MpPlan.id == IndividualSubscription.mp_plan_id)
+        .filter(
+            IndividualSubscription.user_id == user_id,
+            IndividualSubscription.status == "authorized",
+            MpPlan.internal_code.in_(MAX_PLAN_CODES),
+        )
+        .first()
+    )
+    return sub is not None
+
+
+async def require_max_plan(
+    user: UserContext = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> UserContext:
+    """Dependency FastAPI: bloquea con 403 si no tiene plan MAX."""
+    if not check_max_plan_access(user.user_id, db):
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "code": "max_plan_required",
+                "message": "Esta funcionalidad requiere el plan Facilitador Docente MAX.",
+            },
+        )
+    return user
+
 
 def check_agent_access(
     user_id: str, db: Session
