@@ -227,7 +227,7 @@ async def _stream_local(body: ChatRequest, user_id: str):
             for i, word in enumerate(words):
                 chunk = word + (" " if i < len(words) - 1 else "")
                 yield {"type": "token", "text": chunk}
-                await asyncio.sleep(0.022)  # ~45 palabras/seg
+                await asyncio.sleep(0.008)  # feedback casi instantáneo, sin sumar latencia perceptible
     except Exception:
         pass  # Si no es JSON válido, el done lo maneja
 
@@ -316,7 +316,7 @@ async def _stream_agent_engine(body: ChatRequest, user_id: str, db: Session):
             for i, word in enumerate(words):
                 chunk = word + (" " if i < len(words) - 1 else "")
                 yield {"type": "token", "text": chunk}
-                await asyncio.sleep(0.022)
+                await asyncio.sleep(0.008)
     except Exception:
         pass
 

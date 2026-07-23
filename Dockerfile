@@ -27,4 +27,5 @@ EXPOSE 8080
 
 ENV APP_MODULE=api.main:app
 
-CMD ["/bin/sh", "-c", ".venv/bin/uvicorn ${APP_MODULE} --host 0.0.0.0 --port 8080"]
+# --workers 2: Cloud Run corre con 1-2 vCPU en este servicio, más workers competiría por CPU sin ganancia
+CMD ["/bin/sh", "-c", ".venv/bin/uvicorn ${APP_MODULE} --host 0.0.0.0 --port 8080 --workers 2"]

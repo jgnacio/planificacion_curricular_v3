@@ -30,6 +30,8 @@ GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "")
 if not GOOGLE_API_KEY:
     raise ValueError("GOOGLE_API_KEY no está en .env — necesaria para el Agent Platform")
 
+TAVILY_API_KEY = os.getenv("TAVILY_API_KEY", "")
+
 import vertexai
 from vertexai import agent_engines
 from teacher_agent.agent import root_agent
@@ -48,8 +50,6 @@ AGENT_CONFIG = {
         "cloudpickle",
         "pydantic",
         "httpx",
-        "duckduckgo-search",
-        "beautifulsoup4",
         "python-dotenv",
     ],
     "extra_packages": ["teacher_agent"],
@@ -61,6 +61,7 @@ AGENT_CONFIG = {
         "AI_STUDIO_API_KEY": GOOGLE_API_KEY,
         "INTERNAL_API_URL": "https://facilitador-api-81545989837.us-central1.run.app",
         "INTERNAL_API_KEY": "iJmM9M3VCPri2gm8pqH5w5bF1X1qipdyjAhHPz4zDJ6W2qoMzlrBfJ7sL7VoIrsT",
+        "TAVILY_API_KEY": TAVILY_API_KEY,
         "OPEN_NOTEBOOK_URL": "https://104.154.54.205",
         "OPEN_NOTEBOOK_API_KEY": "DBvFTreFB4p9pcH5tdKOAVXusJhEPyg1g1m6KzEjcFUE1QLkRaGPh2YxWOClTVsR",
         "OPEN_NOTEBOOK_NOTEBOOK_ID": "notebook:4blvxvmp0bb4cud5r004",

@@ -55,7 +55,10 @@ gcloud run deploy "$SERVICE_NAME" \
   --region "$REGION" \
   --project "$PROJECT" \
   --allow-unauthenticated \
-  --update-env-vars "$ENV_VARS"
+  --update-env-vars "$ENV_VARS" \
+  --min-instances=1 \
+  --cpu-boost \
+  --no-cpu-throttling
 
 echo ""
 echo "Deploy completado."

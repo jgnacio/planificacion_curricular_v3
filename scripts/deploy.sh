@@ -59,6 +59,7 @@ _build_api_env_vars() {
   [ -n "${MP_WEBHOOK_SECRET:-}" ]         && vars+=",MP_WEBHOOK_SECRET=${MP_WEBHOOK_SECRET}"
   [ -n "${GCS_BUCKET_NAME:-}" ]           && vars+=",GCS_BUCKET_NAME=${GCS_BUCKET_NAME}"
   [ -n "${GCS_SERVICE_ACCOUNT_EMAIL:-}" ] && vars+=",GCS_SERVICE_ACCOUNT_EMAIL=${GCS_SERVICE_ACCOUNT_EMAIL}"
+  [ -n "${TAVILY_API_KEY:-}" ]            && vars+=",TAVILY_API_KEY=${TAVILY_API_KEY}"
   [ -n "${OPEN_NOTEBOOK_URL:-}" ]         && vars+=",OPEN_NOTEBOOK_URL=${OPEN_NOTEBOOK_URL}"
   [ -n "${OPEN_NOTEBOOK_API_KEY:-}" ]     && vars+=",OPEN_NOTEBOOK_API_KEY=${OPEN_NOTEBOOK_API_KEY}"
   [ -n "${OPEN_NOTEBOOK_NOTEBOOK_ID:-}" ] && vars+=",OPEN_NOTEBOOK_NOTEBOOK_ID=${OPEN_NOTEBOOK_NOTEBOOK_ID}"
@@ -117,6 +118,9 @@ step_api() {
     --allow-unauthenticated \
     --no-traffic \
     --set-env-vars "$ENV_VARS" \
+    --min-instances=1 \
+    --cpu-boost \
+    --no-cpu-throttling \
     --quiet
 
   # Revisión recién desplegada

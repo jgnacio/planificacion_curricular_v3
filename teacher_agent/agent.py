@@ -1,3 +1,4 @@
+import asyncio
 import os
 from functools import cached_property
 
@@ -12,7 +13,6 @@ from typing import List
 import httpx
 import json
 import unicodedata
-from duckduckgo_search import DDGS
 
 load_dotenv()
 
@@ -20,6 +20,9 @@ OPEN_NOTEBOOK_URL = os.getenv("OPEN_NOTEBOOK_URL", "http://localhost:5055")
 OPEN_NOTEBOOK_API_KEY = os.getenv("OPEN_NOTEBOOK_API_KEY", "")
 OPEN_NOTEBOOK_NOTEBOOK_ID = os.getenv("OPEN_NOTEBOOK_NOTEBOOK_ID", "notebook:4blvxvmp0bb4cud5r004")
 OPEN_NOTEBOOK_MODEL = os.getenv("OPEN_NOTEBOOK_MODEL", "model:7zoi10k3sca4qvqacud4")
+
+TAVILY_API_KEY = os.getenv("TAVILY_API_KEY", "")
+TAVILY_API_URL = "https://api.tavily.com/search"
 
 INTERNAL_API_URL = os.getenv("INTERNAL_API_URL", "http://localhost:8000")
 INTERNAL_API_KEY = os.getenv("INTERNAL_API_KEY", "")
@@ -75,7 +78,7 @@ def _internal_headers(user_id: str) -> dict:
     return {"X-Internal-Key": INTERNAL_API_KEY, "Content-Type": "application/json"}
 
 
-def obtener_informe_nee(tool_context: ToolContext, alumno_id: int) -> dict:
+async def obtener_informe_nee(tool_context: ToolContext, alumno_id: int) -> dict:
     """
     Obtiene el informe NEE más reciente de un alumno (diagnóstico y recomendaciones del especialista).
     Llamá esta herramienta cuando estés generando una planificación y algún alumno del grupo
@@ -85,12 +88,12 @@ def obtener_informe_nee(tool_context: ToolContext, alumno_id: int) -> dict:
     """
     user_id = tool_context.state.get("user_id", "")
     try:
-        r = httpx.get(
-            f"{INTERNAL_API_URL}/alumnos/{alumno_id}/informes",
-            params={"user_id": user_id},
-            headers=_internal_headers(user_id),
-            timeout=10.0,
-        )
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            r = await client.get(
+                f"{INTERNAL_API_URL}/alumnos/{alumno_id}/informes",
+                params={"user_id": user_id},
+                headers=_internal_headers(user_id),
+            )
         r.raise_for_status()
         informes = r.json()
         if not informes:
@@ -107,7 +110,7 @@ def obtener_informe_nee(tool_context: ToolContext, alumno_id: int) -> dict:
         return {"status": "error", "error_message": str(e)}
 
 
-def listar_alumnos(tool_context: ToolContext, nivel: str = "", grado: str = "", group_id: str = "") -> dict:
+async def listar_alumnos(tool_context: ToolContext, nivel: str = "", grado: str = "", group_id: str = "") -> dict:
     """
     Lista los alumnos registrados. Filtra opcionalmente por nivel, grado y/o group_id.
     Usá esta herramienta antes de crear una planificación para conocer el grupo:
@@ -124,12 +127,12 @@ def listar_alumnos(tool_context: ToolContext, nivel: str = "", grado: str = "", 
     if group_id:
         params["group_id"] = group_id
     try:
-        r = httpx.get(
-            f"{INTERNAL_API_URL}/alumnos/",
-            params=params,
-            headers=_internal_headers(user_id),
-            timeout=10.0,
-        )
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            r = await client.get(
+                f"{INTERNAL_API_URL}/alumnos/",
+                params=params,
+                headers=_internal_headers(user_id),
+            )
         r.raise_for_status()
         alumnos = r.json()
         return {
@@ -141,7 +144,7 @@ def listar_alumnos(tool_context: ToolContext, nivel: str = "", grado: str = "", 
         return {"status": "error", "error_message": str(e)}
 
 
-def crear_planificacion(
+async def crear_planificacion(
     tool_context: ToolContext,
     nombre: str,
     descripcion: str = "",
@@ -175,13 +178,13 @@ def crear_planificacion(
         "chat_exportado": chat_exportado or None,
     }
     try:
-        r = httpx.post(
-            f"{INTERNAL_API_URL}/planificaciones/",
-            params={"user_id": user_id},
-            headers=_internal_headers(user_id),
-            json=payload,
-            timeout=10.0,
-        )
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            r = await client.post(
+                f"{INTERNAL_API_URL}/planificaciones/",
+                params={"user_id": user_id},
+                headers=_internal_headers(user_id),
+                json=payload,
+            )
         r.raise_for_status()
         plan = r.json()
         return {
@@ -194,54 +197,69 @@ def crear_planificacion(
         return {"status": "error", "error_message": str(e)}
 
 
-def buscar_en_internet(consulta: str) -> dict:
+async def buscar_en_internet(tool_context: ToolContext, consulta: str) -> dict:
     """
-    Busca información pedagógica en internet usando DuckDuckGo.
-    Recupera al menos 5 fuentes, extrae el contenido relevante de cada una y lo resume.
+    Busca información pedagógica en internet usando Tavily.
+    Recupera fuentes relevantes con su contenido ya extraído y las resume.
     Usá esta herramienta para enriquecer planificaciones con ideas de actividades,
     recursos didácticos o contexto adicional sobre un contenido curricular.
     Siempre llamá primero a las herramientas de la base de datos curricular y usá esta
     para ampliar el contexto con recursos externos.
+    Se puede usar UNA sola vez por turno: si ya la llamaste, seguí con lo que ya tenés
+    en vez de refinar la consulta y volver a llamarla.
+    La consulta debe ser lenguaje natural (ej: "actividades de ecosistemas para quinto
+    grado escuela uruguaya"), NO una cadena de términos entre comillas — Tavily hace
+    búsqueda híbrida (semántica + keyword) y las comillas fuerzan matching literal,
+    lo que empobrece los resultados.
     """
     _TIMEOUT = 10.0
-    _MAX_CHARS = 3000  # Jina devuelve markdown limpio, podemos ser más generosos
+    _MAX_CHARS = 3000
+    _MIN_SCORE = 0.2  # descarta resultados de relevancia marginal según el score de Tavily
+
+    if tool_context.state.get("temp:web_search_used"):
+        return {
+            "status": "error",
+            "error_message": "Ya se hizo una búsqueda web en este turno. No la repitas: continuá con las fuentes ya obtenidas o generá el contenido sin fuentes externas adicionales.",
+        }
+    tool_context.state["temp:web_search_used"] = True
+
+    if not TAVILY_API_KEY:
+        return {"status": "error", "error_message": "TAVILY_API_KEY no configurada."}
 
     try:
-        with DDGS() as ddgs:
-            raw_results = list(ddgs.text(consulta, max_results=6))
+        async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
+            r = await client.post(
+                TAVILY_API_URL,
+                headers={"Authorization": f"Bearer {TAVILY_API_KEY}"},
+                json={
+                    "query": consulta,
+                    "search_depth": "basic",
+                    "max_results": 5,
+                    "include_answer": False,
+                    "include_raw_content": False,
+                },
+            )
+        if r.status_code == 401:
+            return {"status": "error", "error_message": "TAVILY_API_KEY inválida o vencida."}
+        if r.status_code in (432, 433):
+            return {"status": "error", "error_message": "Se agotaron los créditos/límite del plan de Tavily."}
+        r.raise_for_status()
+        data = r.json()
     except Exception as e:
-        return {"status": "error", "error_message": f"Error en la búsqueda DuckDuckGo: {e}"}
+        return {"status": "error", "error_message": f"Error en la búsqueda Tavily: {e}"}
 
-    if not raw_results:
-        return {"status": "not_found", "message": "No se encontraron resultados para esa consulta."}
+    resultados = [item for item in data.get("results", []) if item.get("score", 0) >= _MIN_SCORE]
+    if not resultados:
+        return {"status": "not_found", "message": "No se encontraron resultados suficientemente relevantes para esa consulta."}
 
-    def _fetch_one(item: dict) -> dict | None:
-        url = item.get("href", "")
-        title = item.get("title", "")
-        snippet = item.get("body", "")
-        if not url:
-            return None
-        try:
-            with httpx.Client(timeout=_TIMEOUT, follow_redirects=True) as client:
-                resp = client.get(f"https://r.jina.ai/{url}")
-                content = resp.text[:_MAX_CHARS] if resp.status_code == 200 else snippet
-        except Exception:
-            content = snippet
-        return {"titulo": title, "url": url, "contenido": content} if content else None
-
-    from concurrent.futures import ThreadPoolExecutor, as_completed
-    fuentes = []
-    with ThreadPoolExecutor(max_workers=3) as pool:
-        futures = {pool.submit(_fetch_one, item): item for item in raw_results[:6]}
-        for future in as_completed(futures):
-            if len(fuentes) >= 3:
-                break
-            result = future.result()
-            if result:
-                fuentes.append(result)
-
-    if not fuentes:
-        return {"status": "not_found", "message": "No se pudo extraer contenido de los resultados."}
+    fuentes = [
+        {
+            "titulo": item.get("title", ""),
+            "url": item.get("url", ""),
+            "contenido": (item.get("content") or "")[:_MAX_CHARS],
+        }
+        for item in resultados
+    ]
 
     return {
         "status": "success",
@@ -251,7 +269,7 @@ def buscar_en_internet(consulta: str) -> dict:
     }
 
 
-def create_activity(
+async def create_activity(
     tool_context: ToolContext,
     title: str,
     content: str,
@@ -283,13 +301,13 @@ def create_activity(
         url = f"{INTERNAL_API_URL}/activities/"
 
     try:
-        r = httpx.post(
-            url,
-            params={"user_id": user_id},
-            headers=_internal_headers(user_id),
-            json=payload,
-            timeout=10.0,
-        )
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            r = await client.post(
+                url,
+                params={"user_id": user_id},
+                headers=_internal_headers(user_id),
+                json=payload,
+            )
         r.raise_for_status()
         activity = r.json()
         return {
@@ -302,7 +320,7 @@ def create_activity(
         return {"status": "error", "error_message": str(e)}
 
 
-def create_sequence(
+async def create_sequence(
     tool_context: ToolContext,
     group_id: str,
     project_id: str,
@@ -328,13 +346,13 @@ def create_sequence(
         "end_date": end_date,
     }
     try:
-        r = httpx.post(
-            f"{INTERNAL_API_URL}/groups/{group_id}/projects/{project_id}/sequences/",
-            params={"user_id": user_id},
-            headers=_internal_headers(user_id),
-            json=payload,
-            timeout=10.0,
-        )
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            r = await client.post(
+                f"{INTERNAL_API_URL}/groups/{group_id}/projects/{project_id}/sequences/",
+                params={"user_id": user_id},
+                headers=_internal_headers(user_id),
+                json=payload,
+            )
         r.raise_for_status()
         seq = r.json()
         return {
@@ -347,7 +365,7 @@ def create_sequence(
         return {"status": "error", "error_message": str(e)}
 
 
-def list_activities(
+async def list_activities(
     tool_context: ToolContext,
     group_id: str = None,
     project_id: str = None,
@@ -376,12 +394,12 @@ def list_activities(
         else:
             url = f"{INTERNAL_API_URL}/groups/{group_id}/projects/{project_id}/activities/"
 
-        r = httpx.get(
-            url,
-            params={"user_id": user_id},
-            headers=_internal_headers(user_id),
-            timeout=10.0,
-        )
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            r = await client.get(
+                url,
+                params={"user_id": user_id},
+                headers=_internal_headers(user_id),
+            )
         r.raise_for_status()
         activities = r.json()
         return {
@@ -394,15 +412,15 @@ def list_activities(
 
 
 # Alias para compatibilidad con sesiones ADK existentes
-def listar_planificaciones(tool_context: ToolContext) -> dict:
+async def listar_planificaciones(tool_context: ToolContext) -> dict:
     """
     Lista todas las planificaciones guardadas en la base de datos, ordenadas de más reciente a más antigua.
     Usá esta herramienta cuando la docente quiera ver, modificar o eliminar planificaciones existentes.
     """
-    return list_activities(tool_context)
+    return await list_activities(tool_context)
 
 
-def update_activity(
+async def update_activity(
     tool_context: ToolContext,
     activity_id: str,
     title: str = None,
@@ -423,13 +441,13 @@ def update_activity(
         "sequence_id": sequence_id,
     }.items() if v is not None}
     try:
-        r = httpx.patch(
-            f"{INTERNAL_API_URL}/activities/{activity_id}",
-            params={"user_id": user_id},
-            headers=_internal_headers(user_id),
-            json=payload,
-            timeout=10.0,
-        )
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            r = await client.patch(
+                f"{INTERNAL_API_URL}/activities/{activity_id}",
+                params={"user_id": user_id},
+                headers=_internal_headers(user_id),
+                json=payload,
+            )
         r.raise_for_status()
         activity = r.json()
         return {
@@ -443,7 +461,7 @@ def update_activity(
 
 
 # Alias para compatibilidad con sesiones ADK existentes
-def actualizar_planificacion(
+async def actualizar_planificacion(
     tool_context: ToolContext,
     planificacion_id: int,
     nombre: str = "",
@@ -459,7 +477,7 @@ def actualizar_planificacion(
     Usá listar_planificaciones primero para obtener el ID correcto.
     """
     # Mapeamos los campos legacy al nuevo esquema
-    return update_activity(
+    return await update_activity(
         tool_context,
         activity_id=planificacion_id,
         title=nombre or None,
@@ -467,19 +485,19 @@ def actualizar_planificacion(
     )
 
 
-def delete_activity(tool_context: ToolContext, activity_id: str) -> dict:
+async def delete_activity(tool_context: ToolContext, activity_id: str) -> dict:
     """
     Elimina permanentemente una actividad por su ID (UUID string).
     Siempre confirmá con la docente antes de eliminar. Usá list_activities para obtener el ID.
     """
     user_id = tool_context.state.get("user_id", "")
     try:
-        r = httpx.delete(
-            f"{INTERNAL_API_URL}/activities/{activity_id}",
-            params={"user_id": user_id},
-            headers=_internal_headers(user_id),
-            timeout=10.0,
-        )
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            r = await client.delete(
+                f"{INTERNAL_API_URL}/activities/{activity_id}",
+                params={"user_id": user_id},
+                headers=_internal_headers(user_id),
+            )
         if r.status_code == 404:
             return {"status": "error", "error_message": f"No existe actividad con ID {activity_id}."}
         r.raise_for_status()
@@ -492,15 +510,15 @@ def delete_activity(tool_context: ToolContext, activity_id: str) -> dict:
 
 
 # Alias para compatibilidad con sesiones ADK existentes
-def eliminar_planificacion(tool_context: ToolContext, planificacion_id: int) -> dict:
+async def eliminar_planificacion(tool_context: ToolContext, planificacion_id: int) -> dict:
     """
     Elimina permanentemente una planificación por su ID.
     Siempre confirmá con la docente antes de eliminar. Usá listar_planificaciones para obtener el ID.
     """
-    return delete_activity(tool_context, activity_id=planificacion_id)
+    return await delete_activity(tool_context, activity_id=planificacion_id)
 
 
-def list_groups(tool_context: ToolContext) -> dict:
+async def list_groups(tool_context: ToolContext) -> dict:
     """
     Lista los grupos del docente. Usá esta herramienta cuando la docente pregunta
     por sus grupos o quiere crear/ver actividades dentro de un grupo específico.
@@ -508,12 +526,12 @@ def list_groups(tool_context: ToolContext) -> dict:
     """
     user_id = tool_context.state.get("user_id", "")
     try:
-        r = httpx.get(
-            f"{INTERNAL_API_URL}/groups/",
-            params={"user_id": user_id},
-            headers=_internal_headers(user_id),
-            timeout=10.0,
-        )
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            r = await client.get(
+                f"{INTERNAL_API_URL}/groups/",
+                params={"user_id": user_id},
+                headers=_internal_headers(user_id),
+            )
         r.raise_for_status()
         groups = r.json()
         return {
@@ -525,7 +543,7 @@ def list_groups(tool_context: ToolContext) -> dict:
         return {"status": "error", "error_message": str(e)}
 
 
-def list_projects(tool_context: ToolContext, group_id: str) -> dict:
+async def list_projects(tool_context: ToolContext, group_id: str) -> dict:
     """
     Lista los proyectos integradores de un grupo. Usá esta herramienta cuando la docente
     quiere ver o trabajar con proyectos integradores de un grupo específico.
@@ -533,12 +551,12 @@ def list_projects(tool_context: ToolContext, group_id: str) -> dict:
     """
     user_id = tool_context.state.get("user_id", "")
     try:
-        r = httpx.get(
-            f"{INTERNAL_API_URL}/groups/{group_id}/projects/",
-            params={"user_id": user_id},
-            headers=_internal_headers(user_id),
-            timeout=10.0,
-        )
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            r = await client.get(
+                f"{INTERNAL_API_URL}/groups/{group_id}/projects/",
+                params={"user_id": user_id},
+                headers=_internal_headers(user_id),
+            )
         r.raise_for_status()
         projects = r.json()
         return {

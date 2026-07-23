@@ -4,7 +4,6 @@ from pydantic import BaseModel
 
 class ActivitySequenceCreate(BaseModel):
     name: str
-    project_id: str
     learning_goal: str | None = None
     order: int = 0
     start_date: date | None = None
