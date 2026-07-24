@@ -34,6 +34,8 @@ from api.routes import access, institutions, billing, subscriptions, webhooks, e
 from api.routes import groups, sequences, activities
 from api.routes import student_reports
 from api.routes import descripciones_fundadas
+from api.routes import curriculo_search
+from api.routes import curriculo_pdf
 
 # Create SQLite tables on startup
 Base.metadata.create_all(bind=engine)
@@ -68,6 +70,8 @@ app.include_router(sequences.router)
 app.include_router(activities.router)
 app.include_router(student_reports.router)
 app.include_router(descripciones_fundadas.router)
+app.include_router(curriculo_search.router)
+app.include_router(curriculo_pdf.router)
 
 
 def _custom_openapi():

@@ -16,11 +16,6 @@ import unicodedata
 
 load_dotenv()
 
-OPEN_NOTEBOOK_URL = os.getenv("OPEN_NOTEBOOK_URL", "http://localhost:5055")
-OPEN_NOTEBOOK_API_KEY = os.getenv("OPEN_NOTEBOOK_API_KEY", "")
-OPEN_NOTEBOOK_NOTEBOOK_ID = os.getenv("OPEN_NOTEBOOK_NOTEBOOK_ID", "notebook:4blvxvmp0bb4cud5r004")
-OPEN_NOTEBOOK_MODEL = os.getenv("OPEN_NOTEBOOK_MODEL", "model:7zoi10k3sca4qvqacud4")
-
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY", "")
 TAVILY_API_URL = "https://api.tavily.com/search"
 
@@ -568,57 +563,64 @@ async def list_projects(tool_context: ToolContext, group_id: str) -> dict:
         return {"status": "error", "error_message": str(e)}
 
 
-def consultar_curriculo_oficial(pregunta: str) -> dict:
+async def consultar_curriculo_oficial(tool_context: ToolContext, pregunta: str) -> dict:
     """
-    Consulta los PDFs oficiales del currículo EBI/ANEP (1er y 2do Ciclo) usando Open Notebook.
-    Devuelve orientaciones pedagógicas, metodologías sugeridas y contexto del programa
-    que complementan los datos estructurados de Neo4j.
+    Consulta los PDFs oficiales del currículo EBI/ANEP (1er y 2do Ciclo) indexados en
+    Vertex AI Search. Devuelve orientaciones pedagógicas, metodologías sugeridas y
+    contexto del programa que complementan los datos estructurados de la base curricular.
 
-    Usá esta tool DESPUÉS de obtener el contenido y CE de Neo4j, para enriquecer
-    la planificación con las orientaciones pedagógicas reales del programa oficial.
-    Ideal para preguntas como:
+    Usá esta tool DESPUÉS de consultar la herramienta de currículo estructurado, para
+    enriquecer la planificación con las orientaciones pedagógicas reales del programa
+    oficial. Ideal para preguntas como:
     - "¿Qué metodologías sugiere el programa para enseñar X?"
     - "¿Cómo se aborda Y en el perfil de Tramo 4?"
     - "¿Qué dice el currículo sobre la evaluación de Z?"
+
+    Cuando cites la respuesta, mencioná siempre la "página N" y el fragmento textual
+    (excerpt) de cada fuente devuelta en `fuentes` — nunca afirmes algo del currículo
+    oficial sin esa cita.
 
     Args:
         pregunta: Pregunta pedagógica sobre el currículo (en español, clara y específica)
 
     Returns:
-        dict con 'status' ('success' o 'error') y 'respuesta' con el texto del currículo
+        dict con 'status' ('success', 'not_found' o 'error'), 'respuesta' (resumen) y
+        'fuentes' (lista de {titulo, pagina, extracto, doc_id, ciclo})
     """
-    print(f"\n[TOOL consultar_curriculo_oficial] Pregunta: '{pregunta[:80]}'")
+    user_id = tool_context.state.get("user_id", "")
     try:
-        headers = {"X-API-Key": OPEN_NOTEBOOK_API_KEY} if OPEN_NOTEBOOK_API_KEY else {}
-        response = httpx.post(
-            f"{OPEN_NOTEBOOK_URL}/api/search/ask/simple",
-            headers=headers,
-            json={
-                "question": pregunta,
-                "notebook_id": OPEN_NOTEBOOK_NOTEBOOK_ID,
-                "strategy_model": OPEN_NOTEBOOK_MODEL,
-                "answer_model": OPEN_NOTEBOOK_MODEL,
-                "final_answer_model": OPEN_NOTEBOOK_MODEL,
-            },
-            timeout=60.0,
-        )
-        if response.status_code == 200:
-            data = response.json()
-            answer = (
-                data.get("answer")
-                or data.get("final_answer")
-                or data.get("response")
-                or str(data)
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            r = await client.post(
+                f"{INTERNAL_API_URL}/internal/curriculo/search",
+                headers=_internal_headers(user_id),
+                json={"consulta": pregunta},
             )
-            print(f"[OK] Respuesta de Open Notebook obtenida ({len(str(answer))} chars)")
-            return {"status": "success", "respuesta": answer}
-        else:
-            detail = response.json().get("detail", response.text)
-            print(f"[WARN] Open Notebook respondió {response.status_code}: {detail}")
-            return {"status": "error", "error_message": f"Open Notebook error: {detail}"}
+        r.raise_for_status()
+        data = r.json()
     except Exception as e:
-        print(f"[WARN] Open Notebook no accesible: {e}")
-        return {"status": "error", "error_message": f"Open Notebook no accesible: {str(e)}"}
+        return {"status": "error", "error_message": f"Currículo oficial no accesible: {str(e)}"}
+
+    sources = data.get("sources") or []
+    if not sources:
+        return {
+            "status": "not_found",
+            "message": data.get("answer") or "No se encontraron resultados en el currículo oficial para esa consulta.",
+        }
+
+    return {
+        "status": "success",
+        "respuesta": data.get("answer", ""),
+        "fuentes": [
+            {
+                "titulo": s.get("title", ""),
+                "pagina": s.get("pageNumber"),
+                "extracto": s.get("excerpt", ""),
+                "doc_id": s.get("docId", ""),
+                "ciclo": s.get("ciclo", ""),
+            }
+            for s in sources
+        ],
+    }
 
 
 # ==========================================
@@ -729,10 +731,20 @@ def consultar_curriculo_estructurado(espacio: str, tramo: int, grado: str) -> di
             if sub_materias:
                 # Merge all sub-materias: combine CEs, contenidos and criterios
                 merged_ces = []
+                # Sin esto se apilan las CEs de todas las materias del espacio y el
+                # modelo elige a ciegas: cada CE queda etiquetada con su materia y se
+                # deduplica por (codigo, texto), porque varias materias repiten CEs.
+                seen_ces: set[tuple[str, str]] = set()
                 merged_contenidos: dict = {}
                 merged_criterios: dict = {}
                 for mat in sub_materias.values():
-                    merged_ces.extend(mat.get("competencias_especificas", []))
+                    mat_nombre = mat.get("nombre", "")
+                    for ce in mat.get("competencias_especificas", []):
+                        clave = (ce.get("codigo", ""), ce.get("texto", ""))
+                        if clave in seen_ces:
+                            continue
+                        seen_ces.add(clave)
+                        merged_ces.append({**ce, "materia": mat_nombre})
                     for gk, items in mat.get("contenidos", {}).items():
                         merged_contenidos.setdefault(gk, [])
                         merged_contenidos[gk].extend(items if isinstance(items, list) else [items])
@@ -805,9 +817,11 @@ def consultar_curriculo_estructurado(espacio: str, tramo: int, grado: str) -> di
 # ==========================================
 
 class PdfRef(BaseModel):
-    filename: str = Field(description="Nombre exacto del archivo PDF, e.g. 'tramo4_lengua.pdf'")
-    page: int = Field(description="Número de página en el PDF")
-    label: str = Field(description="Etiqueta legible para el badge, e.g. 'Lengua Española — p.23'")
+    doc_id: str = Field(description="Copiá TEXTUAL el campo `doc_id` de la fuente devuelta por consultar_curriculo_oficial. Nunca lo inventes.")
+    page: int = Field(description="Copiá el campo `pagina` de esa misma fuente.")
+    ciclo: str = Field(default="", description="Copiá el campo `ciclo` de esa misma fuente, e.g. '2do Ciclo'.")
+    label: str = Field(description="Etiqueta del badge: ciclo y página, e.g. '2do Ciclo — p.9'.")
+    excerpt: str = Field(default="", description="Copiá TEXTUAL el campo `extracto` de esa misma fuente. El visor lo usa para resaltar el pasaje dentro de la página.")
 
 
 class CurriculumMatch(BaseModel):
@@ -817,7 +831,7 @@ class CurriculumMatch(BaseModel):
     grado: str = Field(default="", description="Grado específico, e.g. '5'. Extraé del campo grado_solicitado en el resultado de consultar_curriculo_estructurado.")
     contenido: str = Field(default="", description="Contenido del programa oficial, textual exacto. Elegí el más relevante del array contenidos devuelto por la tool.")
     ce_codigo: str = Field(default="", description="Código de la CE más relevante, e.g. 'CE9'. Extraé del campo codigo dentro de competencias_especificas.")
-    ce_texto: str = Field(default="", description="Enunciado completo de la CE elegida. Extraé del campo descripcion dentro de competencias_especificas.")
+    ce_texto: str = Field(default="", description="Enunciado completo de la CE elegida, copiado TEXTUAL del campo `texto` dentro de competencias_especificas. Nunca lo parafrasees ni lo resumas.")
     competencias_mcn: List[str] = Field(default=[], description="Competencias MCN vinculadas. Extraé del campo mcn de la CE elegida. Lista vacía si no hay.")
     criterio_de_logro: str = Field(default="", description="Criterio de logro textual exacto del programa. Elegí el más relevante del array criterios devuelto por la tool.")
     meta_aprendizaje: str = Field(default="", description="Meta de aprendizaje en plural y presente, e.g. 'Los estudiantes...' NUNCA 'Objetivo'")
@@ -849,6 +863,7 @@ class PlanificacionTable(BaseModel):
     unidad: str = Field(default="", description="Nombre de la unidad o materia")
     tramo: int = Field(default=0, description="Número de tramo")
     competencias_mcn: List[str] = Field(default=[], description="Competencias MCN vinculadas")
+    refs: List["PdfRef"] = Field(default=[], description="Citas al currículo oficial que respaldan esta planificación. Una por cada fuente de consultar_curriculo_oficial que hayas usado. [] si no consultaste el currículo oficial.")
 
 
 class SecuenciaTable(BaseModel):
@@ -861,6 +876,7 @@ class SecuenciaTable(BaseModel):
     contenido: str = Field(default="", description="Contenido textual del programa para este espacio")
     evaluaciones: str = Field(default="", description="Criterios e instrumentos de evaluación (puede quedar vacío)")
     actividades: List[PlanificacionTable] = Field(default=[], description="Lista de actividades de la secuencia. Cada una tiene la misma estructura que una planificación completa con momentos: Inicio, Desarrollo y Cierre.")
+    refs: List["PdfRef"] = Field(default=[], description="Citas al currículo oficial que respaldan la secuencia completa. Una por cada fuente de consultar_curriculo_oficial que hayas usado. [] si no consultaste el currículo oficial.")
 
 
 class FacilitadorResponse(BaseModel):
@@ -965,6 +981,10 @@ Palabras clave → Espacio / Unidad:
 Analizá el mensaje, inferí espacio/tramo/grado usando las tablas de arriba. Luego llamá:
 1. `consultar_curriculo_estructurado(espacio, tramo, grado)` — el argumento `espacio` debe ser la **Unidad** (lado derecho del mapa de palabras clave), NO el nombre del espacio. Ejemplos: "Lengua Española", "Matemática", "Ciencias Naturales". Nunca usar "Espacio de Comunicación" ni ningún otro nombre de espacio como argumento.
 Llamá esta tool EXACTAMENTE UNA VEZ. NO la volvás a llamar en pasos siguientes.
+2. `consultar_curriculo_oficial(pregunta)` — UNA sola vez. Devuelve las páginas del PDF oficial que respaldan la planificación. Guardá las `fuentes` que uses: en PASO 3 se convierten en `refs`.
+   Pasá 2 a 4 palabras del CONTENIDO, no una pregunta. La búsqueda es sobre los PDFs del programa: cada término extra restringe el resultado, y las palabras que no aparecen en el texto (grado, ciclo, "orientaciones", "programa") lo vacían.
+   Bien: `"relaciones tróficas ecosistemas"`, `"fracciones equivalentes"`, `"lectura inferencial"`.
+   Mal: `"¿Qué orientaciones da el programa para enseñar fracciones en quinto grado?"`.
 
 **PASO 2 — Confirmación curricular (exactamente una vez)**
 Con los datos de la tool, elegí el CE y el contenido más relevante, y seleccioná la metodología activa más adecuada para el contexto.
@@ -976,8 +996,10 @@ CRÍTICO: El campo `curriculum_match` es un objeto que VOS construís extrayendo
 - `grado` ← `grado_solicitado` del resultado de `consultar_curriculo_estructurado`
 - `contenido` ← el string del contenido más relevante, dentro de `contenidos` → `5to_grado` (o el grado correspondiente)
 - `ce_codigo` ← `codigo` de la CE más relevante dentro de `competencias_especificas`
-- `ce_texto` ← `descripcion` de esa misma CE
+- `ce_texto` ← `texto` de esa misma CE, copiado TEXTUAL y COMPLETO. El campo se llama `texto` (no `descripcion`). Nunca lo reescribas, resumas ni completes de memoria: si no está en el resultado de la tool, no lo pongas.
 - `competencias_mcn` ← `mcn` de esa misma CE (lista de strings, o lista vacía)
+
+Para elegir la CE más relevante: cada CE trae `codigo`, `texto` y a veces `materia`. Cuando el espacio agrupa varias materias, las CEs vienen etiquetadas con `materia` — elegí una cuya `materia` coincida con la `unidad` que estás planificando. Las CEs son del tramo completo, no del grado: aseguráte de que la que elegís se corresponda con el `contenido` y el `criterio_de_logro` del grado solicitado.
 - `criterio_de_logro` ← el string del criterio más relevante, dentro de `criterios` → `5to_grado`
 - `metodo_ensenanza` ← nombre de la metodología activa que elegiste (NO de la tool)
 - `metodo_justificacion` ← una oración tuya justificando la elección
@@ -1000,6 +1022,7 @@ Luego, para CADA alumno del grupo, revisá si el objeto alumno tiene informes NE
 
 Usá los datos curriculares y metodológicos ya obtenidos en PASO 1 — NO volvás a llamar ninguna tool de currículo.
 Contextualizá todas las actividades usando la temática que indicó la docente.
+Llená `planificacion.refs` con las fuentes que devolvió `consultar_curriculo_oficial` en PASO 1 (ver "Citas al currículo oficial").
 
 CRÍTICO — estructura EXACTA de la respuesta:
 - `type`: "planificacion"
@@ -1046,7 +1069,16 @@ CRÍTICO — estructura EXACTA de la respuesta:
   "espacio": "Espacio de Comunicación",
   "unidad": "Lengua Española",
   "tramo": 4,
-  "competencias_mcn": ["Comunicación", "Metacognitiva"]
+  "competencias_mcn": ["Comunicación", "Metacognitiva"],
+  "refs": [
+    {
+      "doc_id": "compilacion-programas-2do-ciclo",
+      "page": 9,
+      "ciclo": "2do Ciclo",
+      "label": "2do Ciclo — p.9",
+      "excerpt": "Fragmento textual del programa devuelto por la tool"
+    }
+  ]
 }
 ```
 
@@ -1076,8 +1108,9 @@ Cuando la docente pida explícitamente una **secuencia de actividades**:
 
 1. Primero, si la conversación ya tiene un `group_id` en el contexto (porque se está trabajando dentro de un grupo específico), llamá `listar_alumnos(group_id=<group_id>)` para conocer los alumnos del grupo y contextualizar mejor las actividades. Si algún alumno tiene NEE registradas, llamá `obtener_informe_nee(alumno_id=<id>)` para incorporar las adaptaciones a lo largo de toda la secuencia.
 2. Llamá `consultar_curriculo_estructurado()` para obtener el contenido curricular.
-3. Generá entre 3 y 6 actividades numeradas con plan detallado en bullets.
-4. Respondé con `type: "secuencia"` y el objeto `secuencia` completo.
+3. Llamá `consultar_curriculo_oficial()` UNA vez, con 2 a 4 palabras del contenido (no una pregunta; ver PASO 1 del Flujo A). Sus `fuentes` son las citas de la secuencia.
+4. Generá entre 3 y 6 actividades numeradas con plan detallado en bullets.
+5. Respondé con `type: "secuencia"` y el objeto `secuencia` completo, con `secuencia.refs` poblado a partir de las fuentes del paso 3.
 
 **Estructura JSON obligatoria:**
 ```json
@@ -1133,7 +1166,25 @@ Cuando la docente pida explícitamente una **secuencia de actividades**:
         "espacio": "Comunicación",
         "unidad": "Lengua Española",
         "tramo": 4,
-        "competencias_mcn": ["Comunicación", "Pensamiento crítico"]
+        "competencias_mcn": ["Comunicación", "Pensamiento crítico"],
+        "refs": [
+          {
+            "doc_id": "compilacion-programas-2do-ciclo",
+            "page": 41,
+            "ciclo": "2do Ciclo",
+            "label": "2do Ciclo — p.41",
+            "excerpt": "Fragmento textual del programa que respalda esta actividad"
+          }
+        ]
+      }
+    ],
+    "refs": [
+      {
+        "doc_id": "compilacion-programas-2do-ciclo",
+        "page": 9,
+        "ciclo": "2do Ciclo",
+        "label": "2do Ciclo — p.9",
+        "excerpt": "Fragmento textual del programa que respalda la secuencia"
       }
     ]
   }
@@ -1152,7 +1203,29 @@ Al recibir [[Sí, guardar]]:
 `((Opción))` — selección múltiple: chips con botón "Confirmar". Usá cuando puede elegir varios.
 No mezcles `[[]]` y `(())` en la misma respuesta.
 
-El campo `refs` siempre queda `[]`. No incluyas tokens `[[REF:...]]` en el campo `text`.
+### Citas al currículo oficial (`refs`)
+
+Cada vez que uses `consultar_curriculo_oficial`, TODA fuente devuelta en `fuentes` que hayas
+aprovechado se convierte en una entrada de `refs`. Mapeá campo a campo, sin inventar nada:
+
+- `doc_id` ← `doc_id` de la fuente (textual)
+- `page` ← `pagina` de la fuente
+- `ciclo` ← `ciclo` de la fuente
+- `excerpt` ← `extracto` de la fuente (textual, sin recortar)
+- `label` ← el ciclo, un guion largo y la página abreviada, e.g. `2do Ciclo — p.9`. Si `ciclo` viene vacío, usá el `titulo` en su lugar.
+
+NOTA: no escribas nombres de variable entre llaves en tus respuestas de texto; las llaves con un identificador adentro se interpretan como estado de sesión.
+
+Dónde va `refs` según el tipo de respuesta:
+- `type='planificacion'` → dentro de `planificacion.refs`
+- `type='secuencia'` → dentro de `secuencia.refs`
+- `type='message'` → en el `refs` de primer nivel
+
+Reglas:
+- Si no llamaste a `consultar_curriculo_oficial`, `refs` queda `[]`. Nunca fabriques una cita.
+- Una fuente sin `doc_id` o sin `pagina` NO se incluye: sin eso el visor no puede abrir el PDF.
+- No repitas la misma combinación `doc_id` + `page`.
+- No incluyas tokens `[[REF:...]]` en el campo `text`: las citas viajan sólo por `refs`.
 
 ## Boundaries
 
@@ -1186,7 +1259,7 @@ You: (llamás `listar_alumnos`, generás la planificación contextualizada con e
 # ==========================================
 
 root_agent = Agent(
-    model=_GeminiAIStudio(model="gemini-3.5-flash"),
+    model=_GeminiAIStudio(model="gemini-3.5-flash-lite"),
     name="root_agent",
     description="Facilitador Docente EBI — valida planificaciones, genera nuevas desde la normativa oficial ANEP y gestiona el guardado y actualización de planificaciones.",
     instruction=AGENT_PROMPT,
@@ -1196,7 +1269,7 @@ root_agent = Agent(
         # Herramientas de currículo y búsqueda
         consultar_curriculo_estructurado,
         buscar_en_internet,
-        # consultar_curriculo_oficial,  # Open Notebook — desconectado, reconectar cuando esté en prod
+        consultar_curriculo_oficial,
         # Alumnos y NEE
         listar_alumnos,
         obtener_informe_nee,

@@ -47,6 +47,7 @@ AGENT_CONFIG = {
     "requirements": [
         "google-adk==1.33.0",
         "google-cloud-aiplatform[agent_engines]==1.153.1",
+        "google-cloud-discoveryengine==0.13.12",
         "cloudpickle",
         "pydantic",
         "httpx",
@@ -62,10 +63,7 @@ AGENT_CONFIG = {
         "INTERNAL_API_URL": "https://facilitador-api-81545989837.us-central1.run.app",
         "INTERNAL_API_KEY": "iJmM9M3VCPri2gm8pqH5w5bF1X1qipdyjAhHPz4zDJ6W2qoMzlrBfJ7sL7VoIrsT",
         "TAVILY_API_KEY": TAVILY_API_KEY,
-        "OPEN_NOTEBOOK_URL": "https://104.154.54.205",
-        "OPEN_NOTEBOOK_API_KEY": "DBvFTreFB4p9pcH5tdKOAVXusJhEPyg1g1m6KzEjcFUE1QLkRaGPh2YxWOClTVsR",
-        "OPEN_NOTEBOOK_NOTEBOOK_ID": "notebook:4blvxvmp0bb4cud5r004",
-        "OPEN_NOTEBOOK_MODEL": "model:7zoi10k3sca4qvqacud4",
+        "DISCOVERY_ENGINE_DATA_STORE_ID": os.getenv("DISCOVERY_ENGINE_DATA_STORE_ID", ""),
     },
 }
 

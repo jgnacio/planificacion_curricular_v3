@@ -69,7 +69,7 @@ def _generar_texto_ia(prompt_base: str) -> str:
 
     for _ in range(_MAX_INTENTOS_GENERACION):
         response = client.models.generate_content(
-            model="gemini-3.5-flash",
+            model="gemini-3.5-flash-lite",
             contents=prompt_actual,
             config=genai_types.GenerateContentConfig(
                 temperature=0.7,

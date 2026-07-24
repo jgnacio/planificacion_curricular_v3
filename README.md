@@ -243,7 +243,7 @@ El engine activo: `projects/81545989837/locations/us-central1/reasoningEngines/8
 | Capa | Tecnología |
 |------|-----------|
 | Backend | FastAPI, SQLAlchemy, SQLite / Supabase |
-| Agente IA | Google ADK, Gemini (`gemini-3.5-flash`) |
+| Agente IA | Google ADK, Gemini (`gemini-3.5-flash-lite`) |
 | Agent Platform | Vertex AI Agent Platform (Reasoning Engine) |
 | Auth | Clerk JWKS + JWT RS256 |
 | RAG (opcional) | Open Notebook + SurrealDB |

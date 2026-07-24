@@ -60,10 +60,7 @@ _build_api_env_vars() {
   [ -n "${GCS_BUCKET_NAME:-}" ]           && vars+=",GCS_BUCKET_NAME=${GCS_BUCKET_NAME}"
   [ -n "${GCS_SERVICE_ACCOUNT_EMAIL:-}" ] && vars+=",GCS_SERVICE_ACCOUNT_EMAIL=${GCS_SERVICE_ACCOUNT_EMAIL}"
   [ -n "${TAVILY_API_KEY:-}" ]            && vars+=",TAVILY_API_KEY=${TAVILY_API_KEY}"
-  [ -n "${OPEN_NOTEBOOK_URL:-}" ]         && vars+=",OPEN_NOTEBOOK_URL=${OPEN_NOTEBOOK_URL}"
-  [ -n "${OPEN_NOTEBOOK_API_KEY:-}" ]     && vars+=",OPEN_NOTEBOOK_API_KEY=${OPEN_NOTEBOOK_API_KEY}"
-  [ -n "${OPEN_NOTEBOOK_NOTEBOOK_ID:-}" ] && vars+=",OPEN_NOTEBOOK_NOTEBOOK_ID=${OPEN_NOTEBOOK_NOTEBOOK_ID}"
-  [ -n "${OPEN_NOTEBOOK_MODEL:-}" ]       && vars+=",OPEN_NOTEBOOK_MODEL=${OPEN_NOTEBOOK_MODEL}"
+  [ -n "${DISCOVERY_ENGINE_DATA_STORE_ID:-}" ] && vars+=",DISCOVERY_ENGINE_DATA_STORE_ID=${DISCOVERY_ENGINE_DATA_STORE_ID}"
   [ -n "$resource_name" ]                 && vars+=",AGENT_ENGINE_RESOURCE_NAME=$resource_name"
   echo "$vars"
 }

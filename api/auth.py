@@ -96,3 +96,12 @@ def require_institution_admin(user: UserContext) -> UserContext:
     if user.role != "institution_admin" or not user.institution_tenant_id:
         raise HTTPException(status_code=403, detail="Se requiere rol institution_admin")
     return user
+
+
+async def require_internal_key(
+    x_internal_key: str | None = Header(None, alias="x-internal-key"),
+) -> None:
+    """Valida X-Internal-Key sin scoping por usuario — para recursos globales
+    (no por tenant) como la búsqueda de currículo."""
+    if not INTERNAL_API_KEY or x_internal_key != INTERNAL_API_KEY:
+        raise HTTPException(status_code=401, detail="X-Internal-Key inválida o ausente")
